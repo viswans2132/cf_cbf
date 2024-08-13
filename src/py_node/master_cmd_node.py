@@ -32,7 +32,7 @@ class DroneController:
     def __init__(self, name):
         self.name = name
 
-        self.drones = [Drone('cf8'), Drone('dcf2')]
+        self.drones = Drone('cf8')
         self.ugvs = [UGV('turtle1'), UGV('turtle2')]
         self.lenDrones = len(self.drones)
         self.rate = rospy.Rate(30)

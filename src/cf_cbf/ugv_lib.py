@@ -6,7 +6,6 @@ from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, PoseStamped
 from std_msgs.msg import Header
-from trajectory import trajectory
 import time
 import numpy as np
 

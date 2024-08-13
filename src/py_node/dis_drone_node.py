@@ -6,216 +6,135 @@ from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, PoseStamped
 from std_msgs.msg import Header, Int8
-from quaternion_to_euler import quaternion_to_euler
-from tf.transformations import euler_from_quaternion, quaternion_matrix
-from trajectory import trajectory
+from cf_cbf.msg import PosVelMsg
 import time
 import numpy as np
-import cvxpy as cp
+import cvxpy
 import sys
+from cf_cbf.drone_lib import Drone
+from cf_cbf.ugv_lib import UGV
+
+def dist(x_):
+    return np.linalg.norm(x_)
+
+def sq_dist(x_, y_):
+    return np.sum(np.square(x_) / np.square(y_))
 
 
-
-class Drone:
-    name = 'crazyflie'
-
+class DroneController:
     def __init__(self, name):
         self.name = name
-    
-        self.pos = np.array([0.0, 0, 0])
-        self.quat = np.array([0.0, 0, 0, 1])
-        self.yaw = 0.0
-        self.R = np.eye(3)
 
-        self.vel = np.array([0, 0.0, 0])
-        self.ang_vel = np.array([0.0, 0, 0])
+        self.drone = Drone(name)
+        # self.ugvs = [UGV('turtle1'), UGV('turtle2')]
+        # self.lenDrones = len(self.drones)
+        self.rate = rospy.Rate(1)
+        self.modeSub = rospy.Subscriber('/{}/uav_mode'.format(self.drone.name), Int8, self.setMode)
 
-        self.desPos = np.array([0.3, 4.0, 0.8])
-        self.desVel = np.array([0.0, 0, 0])
-        self.desYaw = 0.0
-        self.errVel = np.array([0.0, 0, 0])
-        self.errInt = np.array([0.0, 0, 0])
-        self.errVelInt = np.array([0.0, 0, 0])
-        self.errRel = np.array([[10.0, 10, 10], [10.0, 10, 10]]).T
+        self.droneOdomSub = rospy.Subscriber('/vicon/{}/{}/odom'.format(self.drone.name, self.drone.name), Odometry, self.drone.odom_cb)
+        self.droneRefSub = rospy.Subscriber('/{}/ref'.format(self.drone.name), PosVelMsg, self.drone.ref_cb)
+        self.droneCmdPub = rospy.Publisher('/{}/cmd_vel'.format(self.drone.name), Twist, queue_size=10)
 
-        self.odomStatus = False
-        self.hz = 30.0
-        self.dt = 1/self.hz
-        self.cmdVel = Twist()
-        self.ref = PoseStamped()
 
-        self.Kpos = np.array([-1.5, -1.5, -0.8])
-        self.Kvel = np.array([-0.5, -0.5, -0.5])
-        self.Kder = np.array([-0.05, -0.05, -0.05])
-        self.KintP = np.array([-0.0, -0.0, -0.0])
-        self.KintV = np.array([-0.3, -0.3, -0.2])
-        self.Kyaw = 1
-
-        self.kRad = np.array([0.16, 0.16, 0.64])
-        self.omegaD = 1.0
-
-        self.landCounter = 0.0
-        self.landFlag = False
-        self.startFlag = False
         self.filterFlag = False
-        self.followFlag = False
 
-        self.maxInt = np.array([0.5, 0.5, 0.0])
-        self.maxVelInt = np.array([0.0, 0.0, 0.5])
-        self.maxAcc = np.array([0.25, 0.25, 0.3])
-
-        self.A = np.zeros((3,))
-        self.b = 0.0
-        self.P = np.eye(3)
-        self.u = cp.Variable(3)
-
-        self.rate = rospy.Rate(self.hz)
+        while not rospy.is_shutdown():
+            self.loop()
 
 
-        # self.odomSub = rospy.Subscriber('/vicon/{}/{}/odom'.format(name, name), Odometry, self.odom_cb)
-        print("crazyflie added: {}".format(self.name))
+    def loop(self):
+        # A_ = [np.zeros((1,3))]*self.lenDrones
+        # b_ = [0]*self.lenDrones
+        # i = 0
+        # for droneI, ugvI in zip(self.drones, self.ugvs):
+        #     if self.filterFlag:
+        #         sqHorDist = sq_dist(ugvI.pos[:2] - droneI.pos[:2], np.ones((3,)))
+        #         ugvErrPos = droneI.pos - self.ugvs[i].pos
+        #         h = ugvErrPos[2] - ugvI.kRate*ugvI.kScaleD*sqHorDist*(np.exp(-kRate*sqHorDist)) - droneI.kOff
+        #         A_[i][0,0] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[0]
+        #         A_[i][0,1] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[1]
+        #         A_[i][0,2] = 1
+        #         b[i] = - ugvI.omegaD*h - 2*ugvI.kRate*ugvI.kScaleD*(1 - ugvI.kRate)*np.exp(-ugvI.kRate*sqHorDist)*(ugvErrPos[0]*ugvI.vel[0] + ugvErrPos[1]*ugvI.vel[1])
 
-    def odom_cb(self, data):
-        self.pos[0] = float(data.pose.pose.position.x)
-        self.pos[1] = float(data.pose.pose.position.y)
-        self.pos[2] = float(data.pose.pose.position.z)
-        self.quat[0] = float(data.pose.pose.orientation.x)
-        self.quat[1] = float(data.pose.pose.orientation.y)
-        self.quat[2] = float(data.pose.pose.orientation.z)
-        self.quat[3] = float(data.pose.pose.orientation.w)
-        self.yaw = euler_from_quaternion(self.quat)[2]
-        R_inv = quaternion_matrix(self.quat)[:-1, :-1]
-        # self.R = np.linalg.inv(R_inv)
-        self.R = np.array([[np.cos(self.yaw), np.sin(self.yaw), 0], [-np.sin(self.yaw), np.cos(self.yaw), 0], [0, 0, 1]])
-        self.vel[0] = float(data.twist.twist.linear.x)
-        self.vel[1] = float(data.twist.twist.linear.y)
-        self.vel[2] = float(data.twist.twist.linear.z)
-        self.ang_vel[2] = float(data.twist.twist.angular.z)
+        #         j = i+1
 
-        if self.odomStatus == False:
-            self.desPos[0] = self.pos[0]
-            self.desPos[1] = self.pos[1]
-        self.odomStatus = True
-        # print('odom_received')
+        #         for droneJ in self.drones[j:]:
+        #             droErrPos = droneI.pos - droneJ.pos
+        #             if dist(drErrPos) < 1.5:
+        #                 h = sq_dist(drErrPos, droneI.kRad) - 0.25
+        #                 scaled_disp = 2*droErrPos/droneI.kRad
+        #                 A_[i] = np.vstack((A_[i], scaled_disp))
+        #                 A_[j] = np.vstack((A_[j], -scaled_disp))
+        #                 b_[i] = np.vstack((b[i], -droneI.omegaC*h - scaled_disp@droneJ.vel))
+        #                 b_[j] = np.vstack((b[j], droneJ.omegaC*h + scaled_disp@droneI.vel))
+        #                 j = j+1
 
-    def clearConstraintMatrices(self, A_, b_):
-        self.A = np.empty()
-        self.b = np.vstack((self.b, b_))
+        #         for ugvK in self.ugvs:
+        #             if ugvK != ugvI:
+        #                 ugvErrPos = droneI.pos - droneJ.pos
+        #                 if dist(ugvErrPos) < 1.5:
+        #                     sqHorDist = sq_dist(ugvK.pos[:2] - droneI.pos[:2], ugvK.kRad[:2])
+        #                     h = ugvErrPos[2] - ugvK.kHeight + ugvK.kScaleA*sqHorDist
+        #                     A_[i] = np.vstack((A_[i], np.array([2*ugvK.kScaleA*ugvErrPos[0], 2*ugvK.kScaleA*ugvErrPos[1], 1])))
+        #                     b_[i] = np.vstack((b_[i], -ugvK.omegaA*h + 2*ugvK.kScaleA*(ugvErrPos[0]*ugvK.vel[0] + ugvErrPos[1]*ugvK.vel[1])))
 
-    def updateConstraintMatrices(self, A_, b_):
-        self.A = A_
-        self.b = b_
+        #         droneI.updateConstraintMatrices(A_[i], b[i])
 
-    def setMode(self, data):
-        if data == 0:
-            self.startFlag = True
-            print('takeoff {}'.format(self.name))
-        if data == 1:
+        #     cmdVel = Twist()
+        #     droneI.generateControlInputs(cmdVel)
+        #     self.droneCmdPub[i].publish(cmdVel)
+        #     print('Publishing: {}'.format(droneI.name))
+        self.rate.sleep()
+        print("Hello")
+
+    def setMode(self, msg):
+        self.drones[0].setMode(msg.data)
+        self.drones[1].setMode(msg.data)
+
+        if msg.data == 1:
             self.filterFlag = True
-            print('filter: ON {}'.format(self.name))
-        if data == 2:
-            self.landFlag = True
-            print('landing {}'.format(self.name))
+            self.drones[0].desPos[1] = self.drones[0].desPos[1] - 1.5
+            self.drones[1].desPos[1] = self.drones[1].desPos[1] + 1.5
 
-    def filterValues(self, err, u_):
-        constraints = [self.A@u >= -self.b]
-        prob = cp.Problem(cp.Minimize(cp.quad_form(self.u-u_, self.P)), constraints)
-        result = prob.solve()
+    def land_cb(self, data):
+        self.land_flag = True
+        print('Safety Landing: Active')
 
-        desVel = self.u.value
-
-        if np.linalg.norm(desVel) > 0.3173:
-            desVel = desVel*0.3173/np.linalg.norm(desVel)
-
-        return desVel
-
-
-    def setFollow(self, data):
-        self.followFlag = True
-
-    def ref_cb(self, msg):
-        self.desPos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
-        self.desVel = np.array([msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z])
-
-        q = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-        self.desYaw = euler_from_quaternion(q)[2]
-
-    def publishCmdVel(self, data):
-        self.cmd_pub.publish(data)
-    
-    def odomStatus(self):
-        return self.odomStatus
-
-    def generateControlInputs(self, velMsg):
-        uPitch = 0.0
-        uRoll = 0.0
-        uThrust = 0.0
-        uYaw = 0.0
-        if self.odomStatus:
-            # print("Odometry status is: ".format(self.odomStatus))
-            errPos = self.pos - self.desPos
-            if self.startFlag:
-                self.errInt = self.errInt + errPos*self.dt
-            self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
-
-            self.desVel = self.Kpos * errPos + self.KintP * self.errInt
-
-            if self.filterFlag:
-                self.desVel = self.filterValues(errPos, self.desVel)
+    def path(self):
+        pos_ref_ = self.pos_off + np.array([0.0, 0.0, 0.8])
+        for i in range(0,self.N):
+            self.pos_ref[0 + i*8] = pos_ref_[0] + 1.0 * math.cos(2 * math.pi * (self.t+i)/600)
+            self.pos_ref[1 + i*8] = pos_ref_[1] + 1.0 * math.sin(2 * math.pi * (self.t+i)/600)
+            self.pos_ref[2 + i*8] = 0.8    
+        self.droneI.ref.pose.position.x = self.pos_ref[0]
+        self.droneI.ref.pose.position.y = self.pos_ref[1]
+        self.droneI.ref.pose.position.z = self.pos_ref[2]
+        self.droneI.ref.header.stamp = rospy.Time.now()
 
 
-            derVel = ((self.vel - self.desVel) - self.errVel)/self.dt
-            self.errVel = self.vel - self.desVel
-
-            if self.startFlag:
-                self.errVelInt = self.errVelInt + self.errVel*self.dt
-            self.errVelInt = np.maximum(-self.maxVelInt, np.minimum(self.maxVelInt, self.errVelInt))
-            # print(self.errVelInt)
-
-            des_a = self.Kvel * self.errVel + self.Kder * derVel + self.KintV * self.errVelInt
-            # des_a = self.Kvel * self.errVel
-            des_a = self.R.dot(des_a)
-            # print("Error: {0:.3f}: {1:.3f}: {2:.3f}: \n Acc: {3:.3f}: {4:.3f}: {5:.3f}".format(self.errVel[0], errPos[1], errPos[2], des_a[0], des_a[1], des_a[2]))
-            # print(des_a)
-            # print(des_a[3])
-            des_a = np.maximum(-self.maxAcc, np.minimum(self.maxAcc, des_a))
-            # print("{:.3f}: {:.3f}: {:.3f}".format(errPos[0], errPos[1], errPos[2]))
-
-            # yaw_diff = np.minimum(0.2, np.maximum(self.desYaw - self.yaw, -0.2))
-
-            yaw_des = -1.0*self.yaw -0.5*self.ang_vel[2]
 
 
-            uPitch = des_a[0]
-            uRoll = des_a[1]
-            uYaw = yaw_des
-
-            # print("Error: {0:.3f}: {1:.3f}: {2:.3f}".format(errPos[0], errPos[1], errPos[2], des_a[0], des_a[1], des_a[2]))
-
-            if self.landFlag:
-                self.startFlag = False
-                # uRoll = 0.0
-                # uPitch = 0.0
-                # uYaw = 0.0
-                uThrust = 0.6 - self.landCounter*0.01
-                if self.landCounter > 50:
-                    uThrust = 0.0
-                    uRoll = 0.0
-                    uPitch = 0.0
-                    uyaw = 0.0
-
-                self.landCounter =  self.landCounter + 1
-
-            elif self.startFlag:
-                uThrust = des_a[2] + 0.62
-        else:
-            print("{}: Odometry not received".format(self.name))
-
-        velMsg.linear.x = uPitch
-        velMsg.linear.y = uRoll
-        velMsg.linear.z = uThrust
-        velMsg.angular.z = uYaw
-        # print("{}: {:.3f}: {:.3f}: {:.3f}: {:.3f}: Ready to publish".format(self.name, uPitch, uRoll, uYaw, uThrust))
+    def obs_cb(self, data):
+        self.obs_pos[0] = float(data.pose.pose.position.x)
+        self.obs_pos[1] = float(data.pose.pose.position.y)
+        self.obs_pos[2] = float(data.pose.pose.position.z)
+        self.obs_pos[3] = float(data.twist.twist.linear.x)
+        self.obs_pos[4] = float(data.twist.twist.linear.y)
+        self.obs_pos[5] = float(data.twist.twist.linear.z)
 
 
-        # self.cmdPub.publish(velMsg)
+    def ref_cb(self, data):
+        if(self.follow_flag):
+            self.pos_off[0] = float(data.pose.pose.position.x)
+            self.pos_off[1] = float(data.pose.pose.position.y)
+            self.pos_off[2] = float(data.pose.pose.position.z)
+
+
+
+if __name__ == '__main__':
+     try:
+        rospy.init_node('crazyflie_controller', anonymous=True)
+        uav_name = rospy.get_param('~uav_name')
+        dc = DroneController(uav_name)
+     except rospy.ROSInterruptException:
+        pass

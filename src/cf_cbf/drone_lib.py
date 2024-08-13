@@ -6,9 +6,7 @@ from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, PoseStamped
 from std_msgs.msg import Header, Int8
-from quaternion_to_euler import quaternion_to_euler
 from tf.transformations import euler_from_quaternion, quaternion_matrix
-from trajectory import trajectory
 import time
 import numpy as np
 import cvxpy as cp
