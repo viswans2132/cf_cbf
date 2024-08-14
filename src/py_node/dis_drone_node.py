@@ -24,7 +24,7 @@ class DroneController:
         self.name = name
 
         self.drone = Drone(name)
-        self.rate = rospy.Rate(1)
+        self.rate = rospy.Rate(30)
         self.modeSub = rospy.Subscriber('/{}/uav_mode'.format(self.drone.name), Int8, self.setMode)
 
         self.droneOdomSub = rospy.Subscriber('/vicon/{}/{}/odom'.format(self.drone.name, self.drone.name), Odometry, self.odom_cb)
@@ -39,13 +39,14 @@ class DroneController:
 
 
     def loop(self):
-        self.drone.generateControlInputs(self.cmdArray)
-        self.cmdVelMsg.linear.x = self.cmdArray[0]
-        self.cmdVelMsg.linear.y = self.cmdArray[1]
-        self.cmdVelMsg.linear.z = self.cmdArray[3]
-        self.cmdVelMsg.angular.z = self.cmdArray[2]
-        self.droneCmdPub.publish(self.cmdVelMsg)
-        self.rate.sleep()
+        odomReceived = self.drone.generateControlInputs(self.cmdArray)
+        if odomReceived:
+            self.cmdVelMsg.linear.x = self.cmdArray[0]
+            self.cmdVelMsg.linear.y = self.cmdArray[1]
+            self.cmdVelMsg.linear.z = self.cmdArray[3]
+            self.cmdVelMsg.angular.z = self.cmdArray[2]
+            self.droneCmdPub.publish(self.cmdVelMsg)
+            self.rate.sleep()
 
     def setMode(self, msg):
         self.drone.setMode(msg.data)
@@ -61,7 +62,7 @@ class DroneController:
         self.drone.setRef(pose, vel)
 
     def odom_cb(self, msg):
-        position = np.array([msg.pose.pose.positon.x, msg.pose.pose.positon.y, msg.pose.pose.positon.z])
+        position = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z])
         quat = np.array([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
         velocity = np.array([msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z, msg.twist.twist.angular.z])
         self.drone.setOdom(position, quat, velocity)

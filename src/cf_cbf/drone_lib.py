@@ -63,22 +63,22 @@ class Drone:
 
         print("crazyflie added: {}".format(self.name))
 
-    def setOdom(self, data):
-        self.pos[0] = data.position[0]
-        self.pos[1] = data.position[1]
-        self.pos[2] = data.position[2]
-        self.quat[0] = data.quat[0]
-        self.quat[1] = data.quat[1]
-        self.quat[2] = data.quat[2]
-        self.quat[3] = data.quat[3]
+    def setOdom(self, position, quat, velocity):
+        self.pos[0] = position[0]
+        self.pos[1] = position[1]
+        self.pos[2] = position[2]
+        self.quat[0] = quat[0]
+        self.quat[1] = quat[1]
+        self.quat[2] = quat[2]
+        self.quat[3] = quat[3]
         self.yaw = euler_from_quaternion(self.quat)[2]
         R_inv = quaternion_matrix(self.quat)[:-1, :-1]
         # self.R = np.linalg.inv(R_inv)
         self.R = np.array([[np.cos(self.yaw), np.sin(self.yaw), 0], [-np.sin(self.yaw), np.cos(self.yaw), 0], [0, 0, 1]])
-        self.vel[0] = self.velocity[0]
-        self.vel[1] = self.velocity[1]
-        self.vel[2] = self.velocity[2]
-        self.ang_vel[2] = self.velocity[3]
+        self.vel[0] = velocity[0]
+        self.vel[1] = velocity[1]
+        self.vel[2] = velocity[2]
+        self.ang_vel[2] = velocity[3]
 
         if self.odomStatus == False:
             self.desPos[0] = self.pos[0]
@@ -106,7 +106,7 @@ class Drone:
             print('landing {}'.format(self.name))
 
     def filterValues(self, err, u_):
-        constraints = [self.A@u >= -self.b]
+        constraints = [self.A@self.u >= -self.b]
         prob = cp.Problem(cp.Minimize(cp.quad_form(self.u-u_, self.P)), constraints)
         result = prob.solve()
 
@@ -200,6 +200,8 @@ class Drone:
         velArray[1] = uRoll
         velArray[2] = uYaw
         velArray[3] = uThrust
+
+        return self.odomStatus
         # print("{}: {:.3f}: {:.3f}: {:.3f}: {:.3f}: Ready to publish".format(self.name, uPitch, uRoll, uYaw, uThrust))
 
 
