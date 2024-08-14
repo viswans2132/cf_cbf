@@ -63,8 +63,8 @@ class DroneController:
     def odom_cb(self, msg):
         position = np.array([msg.pose.pose.positon.x, msg.pose.pose.positon.y, msg.pose.pose.positon.z])
         quat = np.array([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
-        vel = np.array([msg.velocity[0], msg.velocity[1], msg.velocity[2], msg.yawVelocity])
-        self.drone.setRef(pose, vel)
+        velocity = np.array([msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z, msg.twist.twist.angular.z])
+        self.drone.setOdom(position, quat, velocity)
 
 
 
