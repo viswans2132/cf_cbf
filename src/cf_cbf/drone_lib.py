@@ -1,11 +1,6 @@
  #!/usr/bin/env python
  # license removed for brevity
-import rospy
 import pkg_resources
-from std_msgs.msg import String
-from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Twist, PoseStamped
-from std_msgs.msg import Header, Int8
 from tf.transformations import euler_from_quaternion, quaternion_matrix
 import time
 import numpy as np
@@ -31,6 +26,7 @@ class Drone:
         self.desPos = np.array([0.3, 4.0, 0.8])
         self.desVel = np.array([0.0, 0, 0])
         self.desYaw = 0.0
+        self.desYawVel = 0.0
         self.errVel = np.array([0.0, 0, 0])
         self.errInt = np.array([0.0, 0, 0])
         self.errVelInt = np.array([0.0, 0, 0])
@@ -39,8 +35,6 @@ class Drone:
         self.odomStatus = False
         self.hz = 30.0
         self.dt = 1/self.hz
-        self.cmdVel = Twist()
-        self.ref = PoseStamped()
 
         self.Kpos = np.array([-1.5, -1.5, -0.8])
         self.Kvel = np.array([-0.5, -0.5, -0.5])
@@ -67,28 +61,24 @@ class Drone:
         self.P = np.eye(3)
         self.u = cp.Variable(3)
 
-        self.rate = rospy.Rate(self.hz)
-
-
-        # self.odomSub = rospy.Subscriber('/vicon/{}/{}/odom'.format(name, name), Odometry, self.odom_cb)
         print("crazyflie added: {}".format(self.name))
 
-    def odom_cb(self, data):
-        self.pos[0] = float(data.pose.pose.position.x)
-        self.pos[1] = float(data.pose.pose.position.y)
-        self.pos[2] = float(data.pose.pose.position.z)
-        self.quat[0] = float(data.pose.pose.orientation.x)
-        self.quat[1] = float(data.pose.pose.orientation.y)
-        self.quat[2] = float(data.pose.pose.orientation.z)
-        self.quat[3] = float(data.pose.pose.orientation.w)
+    def setOdom(self, data):
+        self.pos[0] = data.position[0]
+        self.pos[1] = data.position[1]
+        self.pos[2] = data.position[2]
+        self.quat[0] = data.quat[0]
+        self.quat[1] = data.quat[1]
+        self.quat[2] = data.quat[2]
+        self.quat[3] = data.quat[3]
         self.yaw = euler_from_quaternion(self.quat)[2]
         R_inv = quaternion_matrix(self.quat)[:-1, :-1]
         # self.R = np.linalg.inv(R_inv)
         self.R = np.array([[np.cos(self.yaw), np.sin(self.yaw), 0], [-np.sin(self.yaw), np.cos(self.yaw), 0], [0, 0, 1]])
-        self.vel[0] = float(data.twist.twist.linear.x)
-        self.vel[1] = float(data.twist.twist.linear.y)
-        self.vel[2] = float(data.twist.twist.linear.z)
-        self.ang_vel[2] = float(data.twist.twist.angular.z)
+        self.vel[0] = self.velocity[0]
+        self.vel[1] = self.velocity[1]
+        self.vel[2] = self.velocity[2]
+        self.ang_vel[2] = self.velocity[3]
 
         if self.odomStatus == False:
             self.desPos[0] = self.pos[0]
@@ -131,9 +121,11 @@ class Drone:
     def setFollow(self, data):
         self.followFlag = True
 
-    def ref_cb(self, msg):
-        self.desPos = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
-        self.desVel = np.array([msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z])
+    def setRef(self, pos, vel):
+        self.desPos = np.array([pos[0], pos[1], pos[2]])
+        self.desVel = np.array([vel[1], vel[2], vel[3]])
+        self.desYaw = pos[3]
+        self.desYawVel = vel[3]
 
         q = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
         self.desYaw = euler_from_quaternion(q)[2]
@@ -144,7 +136,7 @@ class Drone:
     def odomStatus(self):
         return self.odomStatus
 
-    def generateControlInputs(self, velMsg):
+    def generateControlInputs(self, velArray):
         uPitch = 0.0
         uRoll = 0.0
         uThrust = 0.0
@@ -188,13 +180,8 @@ class Drone:
             uRoll = des_a[1]
             uYaw = yaw_des
 
-            # print("Error: {0:.3f}: {1:.3f}: {2:.3f}".format(errPos[0], errPos[1], errPos[2], des_a[0], des_a[1], des_a[2]))
-
             if self.landFlag:
                 self.startFlag = False
-                # uRoll = 0.0
-                # uPitch = 0.0
-                # uYaw = 0.0
                 uThrust = 0.6 - self.landCounter*0.01
                 if self.landCounter > 50:
                     uThrust = 0.0
@@ -209,10 +196,10 @@ class Drone:
         else:
             print("{}: Odometry not received".format(self.name))
 
-        velMsg.linear.x = uPitch
-        velMsg.linear.y = uRoll
-        velMsg.linear.z = uThrust
-        velMsg.angular.z = uYaw
+        velArray[0] = uPitch
+        velArray[1] = uRoll
+        velArray[2] = uYaw
+        velArray[3] = uThrust
         # print("{}: {:.3f}: {:.3f}: {:.3f}: {:.3f}: Ready to publish".format(self.name, uPitch, uRoll, uYaw, uThrust))
 
 

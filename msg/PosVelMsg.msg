@@ -1,3 +1,5 @@
 Header header
-geometry_msgs/Pose pose
-geometry_msgs/Twist velocity
+float32[] position
+float32 yaw
+float32[] velocity
+float32 yawVelocity
