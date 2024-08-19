@@ -54,6 +54,15 @@ class DroneController:
 
         self.filterFlag = False
 
+
+        print('Sleeping')
+        time.sleep(1)
+
+        for i in len(self.drones):
+            modeMsg = Int8
+            modeMsg.data = 0.0
+            self.droneModePub[i].publish(modeMsg)
+
         while not rospy.is_shutdown():
             self.loop()
 
