@@ -6,7 +6,7 @@ from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, PoseStamped
 from std_msgs.msg import Header, Int8
-from cf_cbf.msg import PosVelMsg
+from cf_cbf.msg import PosVelMsg, ConstraintMsg, DroneParamsMsg
 import time
 import numpy as np
 import sys
@@ -25,14 +25,21 @@ class DroneController:
 
         self.drone = Drone(name)
         self.rate = rospy.Rate(30)
-        self.modeSub = rospy.Subscriber('/{}/uav_mode'.format(self.drone.name), Int8, self.setMode)
+        self.followSub = rospy.Subscriber('/{}/uav_mode'.format(self.drone.name), Int8, self.setMode)
+        # self.landingSub = rospy.Subscriber('/{}/land'.format(self.drone.name), Bool, self.land_cb)
 
         self.droneOdomSub = rospy.Subscriber('/vicon/{}/{}/odom'.format(self.drone.name, self.drone.name), Odometry, self.odom_cb)
         self.droneRefSub = rospy.Subscriber('/{}/ref'.format(self.drone.name), PosVelMsg, self.ref_cb)
+        self.droneConsSub = rospy.Subscriber('/{}/cons'.format(self.drone.name), ConstraintsMsg, self.cons_cb)
         self.droneCmdPub = rospy.Publisher('/{}/cmd_vel'.format(self.drone.name), Twist, queue_size=10)
+        self.droneParamPub = rospy.Publisher('/{}/param'.format(self.drone.name), DroneParamsMsg, queue_size=10)
 
         self.cmdVelMsg = Twist()
         self.cmdArray = np.array([0,0,0,0.0])
+
+        time.sleep(1)
+
+        self.dron
 
         while not rospy.is_shutdown():
             self.loop()
@@ -50,11 +57,22 @@ class DroneController:
 
     def setMode(self, msg):
         self.drone.setMode(msg.data)
-        self.drone.setMode(msg.data)
+
+    def cons_cb(self, msg):
+        matrix = np.array(msg.constraints).reshape((4,-1))
+        self.drone.updateConstraintMatrices(matrix(:3,:), matrix(3,:))
 
     def land_cb(self, data):
-        self.land_flag = True
+        self.drone.landFlag = True
         print('Safety Landing: Active')
+
+    def follow_cb(self, data):
+        self.drone.followFlag = True
+        print('Trajectory: Active')
+
+    def start_cb(self, data):
+        self.drone.startFlag = True
+        print('Take off: Active')
 
     def ref_cb(self, msg):
         pose = np.array([msg.position[0], msg.position[1], msg.position[2], msg.yaw])

@@ -8,13 +8,27 @@ import cvxpy as cp
 import sys
 
 
+class DroneParameters:
+    name = 'drone_param'
+    def __init__(self, name):    
+        self.pos = np.array([0.0, 0, 0])
+        self.quat = np.array([0.0, 0, 0, 1])
+        self.yaw = 0.0
+        self.R = np.eye(3)
+
+        self.vel = np.array([0, 0.0, 0])
+        self.ang_vel = np.array([0.0, 0, 0])
+
+        self.kRad = np.array([0.16, 0.16, 0.64])
+        self.omegaD = 1.0
+
 
 class Drone:
     name = 'crazyflie'
 
     def __init__(self, name):
         self.name = name
-    
+
         self.pos = np.array([0.0, 0, 0])
         self.quat = np.array([0.0, 0, 0, 1])
         self.yaw = 0.0
@@ -86,22 +100,25 @@ class Drone:
         self.odomStatus = True
         # print('odom_received')
 
-    def clearConstraintMatrices(self, A_, b_):
-        self.A = np.empty()
-        self.b = np.vstack((self.b, b_))
+    def clearConstraintMatrices(self):
+        self.A = np.zeros((3,))
+        self.b = 0.0
 
     def updateConstraintMatrices(self, A_, b_):
         self.A = A_
         self.b = b_
+        print(self.A)
+        print(self.B)
+
 
     def setMode(self, data):
         if data == 0:
-            self.startFlag = True
-            print('takeoff {}'.format(self.name))
-        if data == 1:
             self.filterFlag = True
             print('filter: ON {}'.format(self.name))
-        if data == 2:
+        elif data == 1:
+            self.startFlag = True
+            print('takeoff {}'.format(self.name))
+        elif data == 2:
             self.landFlag = True
             print('landing {}'.format(self.name))
 
@@ -122,13 +139,14 @@ class Drone:
         self.followFlag = True
 
     def setRef(self, pos, vel):
-        self.desPos = np.array([pos[0], pos[1], pos[2]])
-        self.desVel = np.array([vel[1], vel[2], vel[3]])
-        self.desYaw = pos[3]
-        self.desYawVel = vel[3]
+        if self.followFlag:
+            self.desPos = np.array([pos[0], pos[1], pos[2]])
+            self.desVel = np.array([vel[1], vel[2], vel[3]])
+            self.desYaw = pos[3]
+            self.desYawVel = vel[3]
 
-        q = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-        self.desYaw = euler_from_quaternion(q)[2]
+            q = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
+            self.desYaw = euler_from_quaternion(q)[2]
 
     def publishCmdVel(self, data):
         self.cmd_pub.publish(data)
