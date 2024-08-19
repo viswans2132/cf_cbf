@@ -38,8 +38,13 @@ class DroneController:
         self.cmdArray = np.array([0,0,0,0.0])
 
         time.sleep(1)
+        print('Node {}: Awake'.format(self.name))
 
-        self.dron
+        paramMsg = DroneParamsMsg()
+        paramMsg.kRad = self.drone.kRad
+        paramMsg.omegaD = self.drone.omegaD
+        self.droneParamPub.publish(paramMsg)
+        self.rate.sleep()
 
         while not rospy.is_shutdown():
             self.loop()
