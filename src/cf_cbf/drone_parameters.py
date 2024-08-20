@@ -7,6 +7,7 @@ from nav_msgs.msg import Odometry
 class DroneParameters:
     name = 'drone_param'
     def __init__(self, name):    
+        self.name = name
         self.pos = np.array([0.0, 0, 0])
         self.quat = np.array([0.0, 0, 0, 1])
         self.yaw = 0.0
@@ -24,7 +25,7 @@ class DroneParameters:
         self.startTime = rospy.get_time()
 
 
-    def odom_cb(self, msg):
+    def odom_cb(self, data):
         self.pos[0] = float(data.pose.pose.position.x)
         self.pos[1] = float(data.pose.pose.position.y)
         self.pos[2] = float(data.pose.pose.position.z)

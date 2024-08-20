@@ -34,7 +34,7 @@ class DroneController:
 
         self.t = rospy.get_time()
 
-        self.drones = [DroneParameters('dcf2'), DroneParameters('cf8')]
+        self.drones = [DroneParameters('dcf2'), DroneParameters('dcf6')]
         self.ugvs = [UGV('turtle1'), UGV('turtle2')]
         self.lenDrones = len(self.drones)
         self.rate = rospy.Rate(120)
@@ -61,7 +61,7 @@ class DroneController:
 
         for i in range(self.lenDrones):
             modeMsg = Int8()
-            modeMsg.data = 0.0
+            modeMsg.data = 1
             self.droneModePub[i].publish(modeMsg)
 
         while not rospy.is_shutdown():
