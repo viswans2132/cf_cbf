@@ -27,6 +27,7 @@ class DroneController:
     droneParamSub = []
     droneRefPub = []
     droneConsPub = []
+    droneModePub = []
     ugvCmdPub = []
     def __init__(self, name):
         self.name = name
@@ -42,9 +43,9 @@ class DroneController:
         for drone in self.drones:
             self.droneOdomSub.append(rospy.Subscriber('/vicon/{}/{}/odom'.format(drone.name, drone.name), Odometry, drone.odom_cb))
             self.droneParamSub.append(rospy.Subscriber('/{}/params'.format(drone.name), DroneParamsMsg, drone.params_cb))
-            self.droneRefPub = rospy.Publisher('/{}/ref'.format(drone.name), PosVelMsg, queue_size=10)
-            self.droneConsPub = rospy.Publisher('/{}/cons'.format(drone.name), ConstraintMsg, queue_size=10)
-            self.droneModePub = rospy.Publisher('/{}/uav_mode'.format(drone.name), Int8, queue_size=10)
+            self.droneRefPub.append(rospy.Publisher('/{}/ref'.format(drone.name), PosVelMsg, queue_size=10))
+            self.droneConsPub.append(rospy.Publisher('/{}/cons'.format(drone.name), ConstraintMsg, queue_size=10))
+            self.droneModePub.append(rospy.Publisher('/{}/uav_mode'.format(drone.name), Int8, queue_size=10))
 
 
         for ugv in self.ugvs:
@@ -58,8 +59,8 @@ class DroneController:
         print('Sleeping')
         time.sleep(1)
 
-        for i in len(self.drones):
-            modeMsg = Int8
+        for i in range(self.lenDrones):
+            modeMsg = Int8()
             modeMsg.data = 0.0
             self.droneModePub[i].publish(modeMsg)
 
@@ -73,8 +74,7 @@ class DroneController:
         i = 0
         for droneI, ugvI in zip(self.drones, self.ugvs):
             if droneI.odomFlag:
-                if self.filterFlag:
-                    self.t = rospy.get_time() - 
+                if self.filterFlag: 
                     sqHorDist = sq_dist(ugvI.pos[:2] - droneI.pos[:2], np.ones((3,)))
                     ugvErrPos = droneI.pos - ugvI.pos
                     h = ugvErrPos[2] - ugvI.kRate*ugvI.kScaleD*sqHorDist*(np.exp(-kRate*sqHorDist)) - droneI.kOff
@@ -122,7 +122,8 @@ class DroneController:
                     print('Publishing: {}'.format(droneI.name))
                     self.rate.sleep()
             else:
-                print('Odometry Not received for {}'.format(droneI.name))
+                # print('Odometry Not received for {}'.format(droneI.name))
+                pass
             i = i + 1
 
 
@@ -147,6 +148,7 @@ class DroneController:
         print('Safety Landing: Active')
 
     def getPosVelMsg(self, msg, offset, time):
+        time =  time - self.t
         msg.position = [np.cos(offset + time/10), np.sin(offset + time/10), 1.0]
         msg.velocity = [0.1*np.sin(offset + time/10), -0.1*np.cos(offset + time/10), 0.0]
         msg.yaw = 0.0

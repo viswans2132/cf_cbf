@@ -126,5 +126,6 @@
 	<!-- run vicon bridge  -->
 	<!-- <include file="$(find ros_viconstream)/launch/viconstream.launch"/> -->
 	<!-- <node pkg="cf_cbf" name="guardian_node" type="master_cmd_node.py"/> -->
+	<node pkg="cf_cbf" name="master_node" type="master_cmd_node.py" output="screen"/>
 
 </launch>

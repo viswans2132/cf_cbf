@@ -30,7 +30,7 @@ class DroneController:
 
         self.droneOdomSub = rospy.Subscriber('/vicon/{}/{}/odom'.format(self.drone.name, self.drone.name), Odometry, self.odom_cb)
         self.droneRefSub = rospy.Subscriber('/{}/ref'.format(self.drone.name), PosVelMsg, self.ref_cb)
-        self.droneConsSub = rospy.Subscriber('/{}/cons'.format(self.drone.name), ConstraintsMsg, self.cons_cb)
+        self.droneConsSub = rospy.Subscriber('/{}/cons'.format(self.drone.name), ConstraintMsg, self.cons_cb)
         self.droneCmdPub = rospy.Publisher('/{}/cmd_vel'.format(self.drone.name), Twist, queue_size=10)
         self.droneParamPub = rospy.Publisher('/{}/param'.format(self.drone.name), DroneParamsMsg, queue_size=10)
 
@@ -65,7 +65,7 @@ class DroneController:
 
     def cons_cb(self, msg):
         matrix = np.array(msg.constraints).reshape((4,-1))
-        self.drone.updateConstraintMatrices(matrix(:3,:), matrix(3,:))
+        self.drone.updateConstraintMatrices(matrix[:3,:], matrix[3,:])
 
     def land_cb(self, data):
         self.drone.landFlag = True

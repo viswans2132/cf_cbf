@@ -212,7 +212,8 @@ class Drone:
             elif self.startFlag:
                 uThrust = des_a[2] + 0.62
         else:
-            print("{}: Odometry not received".format(self.name))
+            # print("{}: Odometry not received".format(self.name))
+            pass
 
         velArray[0] = uPitch
         velArray[1] = uRoll
