@@ -20,7 +20,7 @@ class UGV:
     vel = np.array([0, 0.0, 0])
     ang_vel = np.array([0.0, 0, 0])
 
-    odom_status = False
+    odomStatus = False
 
     def __init__(self, name):
         self.name = name
@@ -39,15 +39,18 @@ class UGV:
         # self.odom_sub = rospy.Subscriber('/vicon/{}/{}/odom'.format(name, name), Odometry, self.odom_cb)
         # self.cmd_sub = rospy.Subscriber('/old_cmd_vel', TwistStamped, self.oldControl_cb)
 
-        self.kRate = 4.0
-        self.kScaleD = 1.2
-        self.KOffset = 0.05
+        self.kRate = 2.0
+        self.kScaleD = 1.3
+        self.kOffset = 0.03
         self.omegaD = 1.0
         
-        radius = 0.4
+        radius = 0.2
         self.kHeight = 1.0
-        self.kScaleA = self.kHeight/(radius*radius)
+        self.kScaleA = np.sqrt(self.kHeight/radius)
+        print(self.kScaleA)
         self.omegaA = 1.0
+
+        self.odomStatus = False
 
 
 
@@ -56,7 +59,7 @@ class UGV:
     def odom_cb(self, data):
         self.pos[0] = float(data.pose.pose.position.x)
         self.pos[1] = float(data.pose.pose.position.y)
-        self.pos[2] = float(data.pose.pose.position.z)
+        self.pos[2] = float(data.pose.pose.position.z) + 0.03
         self.quat[0] = float(data.pose.pose.orientation.x)
         self.quat[1] = float(data.pose.pose.orientation.y)
         self.quat[2] = float(data.pose.pose.orientation.z)
@@ -64,7 +67,12 @@ class UGV:
         self.vel[0] = float(data.twist.twist.linear.x)
         self.vel[1] = float(data.twist.twist.linear.y)
         self.vel[2] = float(data.twist.twist.linear.z)
-        self.odom_status = True
+        if self.odomStatus == False:
+            self.odomStatus = True
+            print('Odometry Received: {}'.format(self.name))
+
+        if self.name=="demo_turtle1" and self.pos[0] < 0.6:
+            print('{:.3f}'.format(self.pos[0]))
 
     def setStop(self, data):
         self.stop_flag = True
@@ -79,4 +87,4 @@ class UGV:
         self.cmd_pub.publish(data)
     
     def odomStatus(self):
-        return self.odom_status
+        return self.odomStatus

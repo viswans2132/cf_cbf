@@ -55,6 +55,7 @@ add_message_files(
   PosVelMsg.msg
   ConstraintMsg.msg
   DroneParamsMsg.msg
+  Int8Array.msg
 )
 
 ## Generate services in the 'srv' folder

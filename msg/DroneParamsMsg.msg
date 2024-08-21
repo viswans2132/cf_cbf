@@ -1,3 +1,3 @@
 Header header
 float32[] kRad
-float32 omegaD
+float32 omegaC

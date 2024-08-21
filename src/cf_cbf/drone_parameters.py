@@ -17,10 +17,12 @@ class DroneParameters:
         self.vel = np.array([0, 0.0, 0])
         self.ang_vel = np.array([0.0, 0, 0])
 
-        self.kRad = np.array([0.16, 0.16, 0.64])
-        self.omegaD = 1.0
+        self.kRad = np.array([0.04, 0.04, 0.04])
+        self.omegaC = 1.0
 
         self.odomFlag = False
+        self.followFlag = False
+        self.returnFlag = False
 
         self.startTime = rospy.get_time()
 
@@ -42,5 +44,5 @@ class DroneParameters:
 
     def params_cb(self, msg):
         self.kRad = np.array(msg.kRad)
-        self.omegaD = msg.omegaD
+        self.omegaC = msg.omegaC
 

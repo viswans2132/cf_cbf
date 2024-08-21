@@ -1,6 +1,11 @@
 <?xml version="1.0"?>
 <launch>
 	
+	<arg name="uri13" default="radio://0/12/2M/E7E7E7E701" />
+	<arg name="frame13" default="demo_crazyflie1/demo_crazyflie1" />
+	<arg name="x13" default="0" />
+	<arg name="y13" default="4" />
+	<arg name="z13" default="0.5" /> 
 	
 	<arg name="uri1" default="radio://0/50/2M/E7E7E7E7E3" /> 
 	<arg name="frame1" default="cf7/cf7" />
@@ -45,8 +50,8 @@
 	<arg name="y14" default="4" />
 	<arg name="z14" default="0.5" />
 
-	<!-- <include file="$(find crazyflie_driver)/launch/crazyflie_server.launch">
-	</include> -->
+	<include file="$(find crazyflie_driver)/launch/crazyflie_server.launch">
+	</include>
 
 
 	<!--============================ GROUPS ============================-->
@@ -59,29 +64,38 @@
 		</include>
 		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen"/>
 	</group> -->
-
+<!-- 
 	<group ns="dcf6">
-		<!-- <include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
+		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 			<arg name="uri" value="$(arg uri2)" />
 			<arg name="tf_prefix" value="dcf6" />
 			<arg name="enable_logging" value="False" />
-		</include> -->
+		</include>
 		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen" >
 			<param name="uav_name" value="dcf6" />
 		</node>
-	</group>  
+	</group>   -->
+
+	<group ns="demo_crazyflie1">
+		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
+			<arg name="uri" value="$(arg uri13)" />
+			<arg name="tf_prefix" value="demo_crazyflie1" />
+			<arg name="enable_logging" value="False" />
+		</include>
+
+	</group>  <!-- 
 
 	<group ns="dcf2">
-		<!-- <include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
+		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 			<arg name="uri" value="$(arg uri7)" />
 			<arg name="tf_prefix" value="dcf2" />
 			<arg name="enable_logging" value="False" />
-		</include> -->
+		</include>
 
 		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen">
 			<param name="uav_name" value="dcf2" />
 		</node>
-	</group>  
+	</group>   -->
 <!-- 
 	<group ns="dcf13">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
@@ -91,14 +105,16 @@
 		</include>
 		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen"/>
 	</group>   -->
-<!-- 
-	 <group ns="cf8">
+
+<!-- 	 <group ns="cf8">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 		<arg name="uri" value="$(arg uri4)" />
 		<arg name="tf_prefix" value="cf8" />
 		<arg name="enable_logging" value="False" />
 		</include>
-		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen"/>
+		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen">
+			<param name="uav_name" value="cf8" />
+		</node>
 	</group>   -->
 <!-- 
 	<group ns="dcf9">
@@ -126,6 +142,5 @@
 	<!-- run vicon bridge  -->
 	<!-- <include file="$(find ros_viconstream)/launch/viconstream.launch"/> -->
 	<!-- <node pkg="cf_cbf" name="guardian_node" type="master_cmd_node.py"/> -->
-	<node pkg="cf_cbf" name="master_node" type="master_cmd_node.py" output="screen"/>
 
 </launch>

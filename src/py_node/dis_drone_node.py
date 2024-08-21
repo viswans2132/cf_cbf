@@ -42,9 +42,11 @@ class DroneController:
 
         paramMsg = DroneParamsMsg()
         paramMsg.kRad = self.drone.kRad
-        paramMsg.omegaD = self.drone.omegaD
+        paramMsg.omegaC = self.drone.omegaC
         self.droneParamPub.publish(paramMsg)
         self.rate.sleep()
+
+        self.timer = rospy.get_time()
 
         while not rospy.is_shutdown():
             self.loop()
@@ -52,6 +54,8 @@ class DroneController:
 
     def loop(self):
         odomReceived = self.drone.generateControlInputs(self.cmdArray)
+        if rospy.get_time() - self.timer > 0.2:
+            self.drone.landFlag = True
         if odomReceived:
             self.cmdVelMsg.linear.x = self.cmdArray[0]
             self.cmdVelMsg.linear.y = self.cmdArray[1]
@@ -80,15 +84,20 @@ class DroneController:
         print('Take off: Active')
 
     def ref_cb(self, msg):
-        pose = np.array([msg.position[0], msg.position[1], msg.position[2], msg.yaw])
-        vel = np.array([msg.velocity[0], msg.velocity[1], msg.velocity[2], msg.yawVelocity])
-        self.drone.setRef(pose, vel)
+        # print(msg.position)
+        try:
+            pose = np.array([msg.position[0], msg.position[1], msg.position[2], msg.yaw])
+            vel = np.array([msg.velocity[0], msg.velocity[1], msg.velocity[2], msg.yawVelocity])
+            self.drone.setRef(pose, vel)
+        except IndexError:
+            print('Ref msg empty: {}'.format(msg.position))
 
     def odom_cb(self, msg):
         position = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z])
         quat = np.array([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
         velocity = np.array([msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z, msg.twist.twist.angular.z])
         self.drone.setOdom(position, quat, velocity)
+        self.timer = rospy.get_time()
 
 
 

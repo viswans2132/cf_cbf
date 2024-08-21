@@ -6,7 +6,7 @@ from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, PoseStamped
 from std_msgs.msg import Header, Int8
-from cf_cbf.msg import PosVelMsg, ConstraintMsg, DroneParamsMsg
+from cf_cbf.msg import PosVelMsg, ConstraintMsg, DroneParamsMsg, Int8Array
 import time
 import numpy as np
 import cvxpy
@@ -31,14 +31,17 @@ class DroneController:
     ugvCmdPub = []
     def __init__(self, name):
         self.name = name
+        self.filterFlag = False
 
         self.t = rospy.get_time()
 
-        self.drones = [DroneParameters('dcf2'), DroneParameters('dcf6')]
-        self.ugvs = [UGV('turtle1'), UGV('turtle2')]
+        self.drones = [DroneParameters('cf8'), DroneParameters('demo_crazyflie1')]
+        # self.drones = [DroneParameters('demo_crazyflie1')]
+        self.ugvs = [UGV('demo_turtle2'), UGV('demo_turtle1')]
+        # self.ugvs = [UGV('demo_turtle1')]
         self.lenDrones = len(self.drones)
-        self.rate = rospy.Rate(120)
-        self.modeSub = rospy.Subscriber('/uav_mode', Int8, self.setMode)
+        self.rate = rospy.Rate(1)
+        self.modeSub = rospy.Subscriber('/uav_modes', Int8Array, self.setMode)
 
         for drone in self.drones:
             self.droneOdomSub.append(rospy.Subscriber('/vicon/{}/{}/odom'.format(drone.name, drone.name), Odometry, drone.odom_cb))
@@ -51,9 +54,6 @@ class DroneController:
         for ugv in self.ugvs:
             self.ugvOdomSub.append(rospy.Subscriber('/vicon/{}/{}/odom'.format(ugv.name, ugv.name), Odometry, ugv.odom_cb))
             self.ugvCmdPub.append(rospy.Publisher('/{}/cmd_vel'.format(ugv.name), Twist, queue_size=10))
-
-
-        self.filterFlag = False
 
 
         print('Sleeping')
@@ -72,76 +72,111 @@ class DroneController:
         A_ = [np.zeros((1,3))]*self.lenDrones
         b_ = [0]*self.lenDrones
         i = 0
-        for droneI, ugvI in zip(self.drones, self.ugvs):
+        for droneI in self.drones:
             if droneI.odomFlag:
+                ugvI = self.ugvs[i]
                 if self.filterFlag: 
-                    sqHorDist = sq_dist(ugvI.pos[:2] - droneI.pos[:2], np.ones((3,)))
+                    sqHorDist = sq_dist(ugvI.pos[:2] - droneI.pos[:2], np.ones((2,)))
                     ugvErrPos = droneI.pos - ugvI.pos
-                    h = ugvErrPos[2] - ugvI.kRate*ugvI.kScaleD*sqHorDist*(np.exp(-kRate*sqHorDist)) - droneI.kOff
-                    A_[i][0,0] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[0]
-                    A_[i][0,1] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[1]
-                    A_[i][0,2] = 1
-                    b[i] = - ugvI.omegaD*h - 2*ugvI.kRate*ugvI.kScaleD*(1 - ugvI.kRate)*np.exp(-ugvI.kRate*sqHorDist)*(ugvErrPos[0]*ugvI.vel[0] + ugvErrPos[1]*ugvI.vel[1])
+                    print("{}: {:.3f}, {:.3f}, {:.3f}".format(ugvI.name, ugvI.pos[0], ugvI.pos[1], ugvI.pos[2]))
+                    # print("{:.3f}, {:.3f}, {:.3f}".format(droneI.pos[0], droneI.pos[1], droneI.pos[2]))
+                    # print("{:.3f}, {:.3f}, {:.3f}".format(ugvErrPos[0], ugvErrPos[1], ugvErrPos[2]))
+                    if sqHorDist < 0.01 and ugvErrPos[2] < 0.05:
+                        print('Time to initiate landing')
+                        droneModeMsg = Int8()
+                        droneModeMsg.data = 2
+                        self.droneModePub[i].publish(droneModeMsg)
 
-                    j = i+1
+                    else:
+                        h = ugvErrPos[2] - ugvI.kRate*ugvI.kScaleD*sqHorDist*(np.exp(-ugvI.kRate*sqHorDist)) - ugvI.kOffset
+                        # print('H: {}: {}'.format(h, ugvI.name))
+                        A_[i][0,0] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[0]
+                        A_[i][0,1] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[1]
+                        A_[i][0,2] = 1
+                        b_[i] = - ugvI.omegaD*h - 2*ugvI.kRate*ugvI.kScaleD*(1 - ugvI.kRate)*np.exp(-ugvI.kRate*sqHorDist)*(ugvErrPos[0]*ugvI.vel[0] + ugvErrPos[1]*ugvI.vel[1])
 
-                    for droneJ in self.drones[j:]:
-                        droErrPos = droneI.pos - droneJ.pos
-                        if dist(drErrPos) < 1.5:
-                            h = sq_dist(drErrPos, droneI.kRad) - 0.25
-                            scaled_disp = 2*droErrPos/droneI.kRad
-                            A_[i] = np.vstack((A_[i], scaled_disp))
-                            A_[j] = np.vstack((A_[j], -scaled_disp))
-                            b_[i] = np.vstack((b[i], -droneI.omegaC*h - scaled_disp@droneJ.vel))
-                            b_[j] = np.vstack((b[j], droneJ.omegaC*h + scaled_disp@droneI.vel))
-                            j = j+1
+                        j = i+1
 
-                    for ugvK in self.ugvs:
-                        if ugvK != ugvI:
-                            ugvErrPos = droneI.pos - droneJ.pos
-                            if dist(ugvErrPos) < 1.5:
-                                sqHorDist = sq_dist(ugvK.pos[:2] - droneI.pos[:2], ugvK.kRad[:2])
-                                h = ugvErrPos[2] - ugvK.kHeight + ugvK.kScaleA*sqHorDist
-                                A_[i] = np.vstack((A_[i], np.array([2*ugvK.kScaleA*ugvErrPos[0], 2*ugvK.kScaleA*ugvErrPos[1], 1])))
-                                b_[i] = np.vstack((b_[i], -ugvK.omegaA*h + 2*ugvK.kScaleA*(ugvErrPos[0]*ugvK.vel[0] + ugvErrPos[1]*ugvK.vel[1])))
-                    droneConsMsg = ConstraintMsg()
-                    droneConsMsg.constraints = np.append(np.flatten(A_[i]), b_).tolist()
-                    self.droneConsPub[i](droneConsMsg)
+                        for droneJ in self.drones[j:]:
+                            droErrPos = droneI.pos - droneJ.pos
+                            if dist(droErrPos) < 0.2:
+                                h = sq_dist(droErrPos, droneI.kRad) - 1.0
+                                scaled_disp = 2*droErrPos/droneI.kRad
+                                A_[i] = np.vstack((A_[i], scaled_disp))
+                                A_[j] = np.vstack((A_[j], -scaled_disp))
+                                b_[i] = np.vstack((b_[i], -droneI.omegaC*h - scaled_disp@droneJ.vel))
+                                b_[j] = np.vstack((b_[j], droneJ.omegaC*h + scaled_disp@droneI.vel))
+                                j = j+1
 
-                    refMsg = PosVelMsg()
-                    if droneI.followFlag:
-                        self.getPosVelMsg(refMsg, droneI.offsetAngle, rospy.get_time())
+                        for ugvK in self.ugvs:
+                            if ugvK != ugvI:
+                                ugvErrPos = droneI.pos - ugvK.pos
+                                if dist(ugvErrPos) < 1.5:
+                                    sqHorDist = sq_dist(ugvK.pos[:2] - droneI.pos[:2], np.array([ugvK.kScaleA, ugvK.kScaleA]))
+                                    h = ugvErrPos[2] - ugvK.kHeight + ugvK.kScaleA*sqHorDist
+                                    A_[i] = np.vstack((A_[i], np.array([2*ugvK.kScaleA*ugvErrPos[0], 2*ugvK.kScaleA*ugvErrPos[1], 1])))
+                                    b_[i] = np.vstack((b_[i], -ugvK.omegaA*h + 2*ugvK.kScaleA*(ugvErrPos[0]*ugvK.vel[0] + ugvErrPos[1]*ugvK.vel[1])))
+                        droneConsMsg = ConstraintMsg()
+                        # print(A_[i])
+                        # print(np.append(A_[i].flatten(),b_[i]))
+                        droneConsMsg.constraints = np.append(A_[i].flatten(), b_[i]).tolist()
+                        self.droneConsPub[i].publish(droneConsMsg)
 
-                    elif droneI.returnFlag:
-                        refMsg.position = [ugvI.pos[0], ugvI.pos[1], ugvI.pos[2]]
-                        refMsg.velocity = [ugvI.vel[0], ugvI.vel[1], ugvI.vel[2]]
+                        refMsg = PosVelMsg()
+                        refMsg.position = [droneI.pos[0], droneI.pos[1], 0.5]
+                        refMsg.velocity = [0.0, 0.0, 0.0]
                         refMsg.yaw = 0.0
                         refMsg.yawVelocity = 0.0
 
-                    self.droneRefPub[i].publish(refMsg)
-                    print('Publishing: {}'.format(droneI.name))
-                    self.rate.sleep()
+                        if droneI.followFlag:
+                            self.getPosVelMsg(refMsg, droneI.offsetAngle, rospy.get_time())
+
+                        elif droneI.returnFlag:
+                            if ugvI.odomStatus:
+                                refMsg.position = [ugvI.pos[0], ugvI.pos[1], ugvI.pos[2]]
+                                refMsg.velocity = [ugvI.vel[0], ugvI.vel[1], ugvI.vel[2]]
+                            # else:
+                            #     # print("UGV position not received. Landing at the current position")
+                            #     refMsg.position = [droneI.pos[0], droneI.pos[1], 0.5]
+                            #     droneModeMsg = Int8()
+                            #     droneModeMsg.data = 2
+                            #     self.droneModePub[i].publish(droneModeMsg)
+
+
+                        self.droneRefPub[i].publish(refMsg)
+                        # print('Publishing: {}'.format(droneI.name))
             else:
                 # print('Odometry Not received for {}'.format(droneI.name))
                 pass
+            self.rate.sleep()
             i = i + 1
 
 
     def setMode(self, msg):
-        if self.filterFlag == False:
-            self.filterFlag = True
-            self.t = rospy.get_time()
-        for i in range(self.lenDrones):
-            if msg.data[i] == 0 or msg.data[i] == 2:
+        if len(msg.data) != len(self.droneModePub):
+            print("Invalid number of values in the msg. Currently, there are {} drones active.".format(self.lenDrones))
+        else:
+            if self.filterFlag == False:
+                print('Filter Active')
+                self.filterFlag = True
+                self.t = rospy.get_time()
+            for i in range(self.lenDrones):
                 droneModeMsg = Int8()
-                droneConsMsg.data = msg.data[i]
-                self.droneModePub[i].publish(droneConsMsg)
-                self.drones[i].followFlag = True
-                self.drones[i].returnFlag = False
+                if msg.data[i] == 0 or msg.data[i] == 2:
+                    droneModeMsg.data = msg.data[i]
+                    self.droneModePub[i].publish(droneModeMsg)
+                    self.drones[i].followFlag = True
+                    self.drones[i].returnFlag = False
 
-            elif msg.data[i] == 1:
-                self.drones[i].returnFlag = True
-                self.drones[i].followFlag = False
+                elif msg.data[i] == 1:
+                    droneModeMsg.data = 0
+                    self.droneModePub[i].publish(droneModeMsg)
+                    self.drones[i].returnFlag = True
+                    self.drones[i].followFlag = False
+                    print('Return Flag On')
+
+                else:
+                    print("Invalid mode for drone {}. Available modes: 0 - Follow Trajectory, 1 - Return and Land 2 - Safety Land".format(self.drones[i].name))
 
     def land_cb(self, data):
         self.landFlag = True
@@ -149,8 +184,10 @@ class DroneController:
 
     def getPosVelMsg(self, msg, offset, time):
         time =  time - self.t
-        msg.position = [np.cos(offset + time/10), np.sin(offset + time/10), 1.0]
-        msg.velocity = [0.1*np.sin(offset + time/10), -0.1*np.cos(offset + time/10), 0.0]
+        # msg.position = [np.cos(offset + time/5), np.sin(offset + time/5), 0.5]
+        msg.position = [0, 0, 0.5]
+        # msg.velocity = [0.1*np.sin(offset + time/5), -0.1*np.cos(offset + time/5), 0.0]
+        msg.velocity = [0.0, -0.0, 0.0]
         msg.yaw = 0.0
         msg.yawVelocity = 0.0
 

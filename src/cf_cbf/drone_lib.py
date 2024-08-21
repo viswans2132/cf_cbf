@@ -7,22 +7,6 @@ import numpy as np
 import cvxpy as cp
 import sys
 
-
-class DroneParameters:
-    name = 'drone_param'
-    def __init__(self, name):    
-        self.pos = np.array([0.0, 0, 0])
-        self.quat = np.array([0.0, 0, 0, 1])
-        self.yaw = 0.0
-        self.R = np.eye(3)
-
-        self.vel = np.array([0, 0.0, 0])
-        self.ang_vel = np.array([0.0, 0, 0])
-
-        self.kRad = np.array([0.16, 0.16, 0.64])
-        self.omegaD = 1.0
-
-
 class Drone:
     name = 'crazyflie'
 
@@ -37,7 +21,7 @@ class Drone:
         self.vel = np.array([0, 0.0, 0])
         self.ang_vel = np.array([0.0, 0, 0])
 
-        self.desPos = np.array([0.3, 4.0, 0.8])
+        self.desPos = np.array([0.0, 0.0, 0.5])
         self.desVel = np.array([0.0, 0, 0])
         self.desYaw = 0.0
         self.desYawVel = 0.0
@@ -50,7 +34,7 @@ class Drone:
         self.hz = 30.0
         self.dt = 1/self.hz
 
-        self.Kpos = np.array([-1.5, -1.5, -0.8])
+        self.Kpos = np.array([-1.8, -1.8, -0.8])
         self.Kvel = np.array([-0.5, -0.5, -0.5])
         self.Kder = np.array([-0.05, -0.05, -0.05])
         self.KintP = np.array([-0.0, -0.0, -0.0])
@@ -58,7 +42,7 @@ class Drone:
         self.Kyaw = 1
 
         self.kRad = np.array([0.16, 0.16, 0.64])
-        self.omegaD = 1.0
+        self.omegaC = 1.0
 
         self.landCounter = 0.0
         self.landFlag = False
@@ -66,8 +50,8 @@ class Drone:
         self.filterFlag = False
         self.followFlag = False
 
-        self.maxInt = np.array([0.5, 0.5, 0.0])
-        self.maxVelInt = np.array([0.0, 0.0, 0.5])
+        self.maxInt = np.array([0.0, 0.0, 0.0])
+        self.maxVelInt = np.array([0.3, 0.3, 0.5])
         self.maxAcc = np.array([0.25, 0.25, 0.3])
 
         self.A = np.zeros((3,))
@@ -105,15 +89,16 @@ class Drone:
         self.b = 0.0
 
     def updateConstraintMatrices(self, A_, b_):
-        self.A = A_
+        self.A = A_.T
         self.b = b_
-        print(self.A)
-        print(self.B)
+        # print(self.A)
+        # print(self.b)
 
 
     def setMode(self, data):
         if data == 0:
             self.filterFlag = True
+            self.followFlag = True
             print('filter: ON {}'.format(self.name))
         elif data == 1:
             self.startFlag = True
@@ -123,12 +108,23 @@ class Drone:
             print('landing {}'.format(self.name))
 
     def filterValues(self, err, u_):
-        constraints = [self.A@self.u >= -self.b]
-        prob = cp.Problem(cp.Minimize(cp.quad_form(self.u-u_, self.P)), constraints)
-        result = prob.solve()
+        # print([self.A.shape, self.u.shape])
+        try:
+            constraints = [self.A@self.u >= self.b]
+            prob = cp.Problem(cp.Minimize(cp.quad_form(self.u-u_, self.P)), constraints)
+            result = prob.solve()
 
-        desVel = self.u.value
+            desVel = self.u.value
+        except ValueError:
+            print("Constraint matrices have incompatible dimensions {}:{}".format(self.A.shape, self.b.shape))
+            self.landFlag = True
+            desVel = np.array([0,0,-0.1])
 
+        # desVel = u_
+
+        # if self.name == "demo_crazyflie1":
+            # print("{:.3f}, {:.3f}, {:.3f}".format(desVel[0], desVel[1], desVel[2]))
+            # print("{:.3f}, {:.3f}, {:.3f}".format(u_[0], u_[1], u_[2]))
         if np.linalg.norm(desVel) > 0.3173:
             desVel = desVel*0.3173/np.linalg.norm(desVel)
 
@@ -145,9 +141,6 @@ class Drone:
             self.desYaw = pos[3]
             self.desYawVel = vel[3]
 
-            q = np.array([msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w])
-            self.desYaw = euler_from_quaternion(q)[2]
-
     def publishCmdVel(self, data):
         self.cmd_pub.publish(data)
     
@@ -162,6 +155,7 @@ class Drone:
         if self.odomStatus:
             # print("Odometry status is: ".format(self.odomStatus))
             errPos = self.pos - self.desPos
+            # print('{:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
             if self.startFlag:
                 self.errInt = self.errInt + errPos*self.dt
             self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
@@ -200,8 +194,8 @@ class Drone:
 
             if self.landFlag:
                 self.startFlag = False
-                uThrust = 0.6 - self.landCounter*0.01
-                if self.landCounter > 50:
+                uThrust = 0.6 - self.landCounter*0.03
+                if self.landCounter > 30:
                     uThrust = 0.0
                     uRoll = 0.0
                     uPitch = 0.0
