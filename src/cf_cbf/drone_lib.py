@@ -7,7 +7,7 @@ import numpy as np
 import cvxpy as cp
 import sys
 
-class Drone:
+class Drone(object):
     name = 'crazyflie'
 
     def __init__(self, name):
@@ -21,7 +21,7 @@ class Drone:
         self.vel = np.array([0, 0.0, 0])
         self.ang_vel = np.array([0.0, 0, 0])
 
-        self.desPos = np.array([0.0, 0.0, 0.5])
+        self.desPos = np.array([0.0, 0.0, 0.7])
         self.desVel = np.array([0.0, 0, 0])
         self.desYaw = 0.0
         self.desYawVel = 0.0
@@ -34,11 +34,11 @@ class Drone:
         self.hz = 30.0
         self.dt = 1/self.hz
 
-        self.Kpos = np.array([-1.8, -1.8, -0.8])
-        self.Kvel = np.array([-0.5, -0.5, -0.5])
+        self.Kpos = np.array([-2.5, -2.5, -0.7])
+        self.Kvel = np.array([-0.5, -0.5, -0.8])
         self.Kder = np.array([-0.05, -0.05, -0.05])
-        self.KintP = np.array([-0.0, -0.0, -0.0])
-        self.KintV = np.array([-0.3, -0.3, -0.2])
+        self.KintP = np.array([-0.5, -0.5, -0.0])
+        self.KintV = np.array([-0.1, -0.1, -0.4])
         self.Kyaw = 1
 
         self.kRad = np.array([0.16, 0.16, 0.64])
@@ -49,6 +49,7 @@ class Drone:
         self.startFlag = False
         self.filterFlag = False
         self.followFlag = False
+        self.returnFlag = False
 
         self.maxInt = np.array([0.0, 0.0, 0.0])
         self.maxVelInt = np.array([0.3, 0.3, 0.5])
@@ -89,10 +90,11 @@ class Drone:
         self.b = 0.0
 
     def updateConstraintMatrices(self, A_, b_):
-        self.A = A_.T
+        self.A = A_
         self.b = b_
         # print(self.A)
-        # print(self.b)
+        # print('A: {}'.format(self.A))
+        # print('b: {}'.format(self.b))
 
 
     def setMode(self, data):
@@ -101,14 +103,20 @@ class Drone:
             self.followFlag = True
             print('filter: ON {}'.format(self.name))
         elif data == 1:
+            if self.startFlag and self.filterFlag and self.followFlag:
+                self.returnFlag = True
             self.startFlag = True
             print('takeoff {}'.format(self.name))
         elif data == 2:
+            if self.landFlag == False:
+                print('landing {}'.format(self.name))
             self.landFlag = True
-            print('landing {}'.format(self.name))
 
     def filterValues(self, err, u_):
         # print([self.A.shape, self.u.shape])
+        # if np.linalg.norm(u_) > 1.0:
+        #     u_ = u_*1.0/np.linalg.norm(u_)
+        # u_ = np.maximum(-np.array([0.3, 0.3, 0.2]), np.minimum(np.array([0.3, 0.3, 0.5]), u_))
         try:
             constraints = [self.A@self.u >= self.b]
             prob = cp.Problem(cp.Minimize(cp.quad_form(self.u-u_, self.P)), constraints)
@@ -122,11 +130,11 @@ class Drone:
 
         # desVel = u_
 
-        # if self.name == "demo_crazyflie1":
+        if self.name == "cf8":
             # print("{:.3f}, {:.3f}, {:.3f}".format(desVel[0], desVel[1], desVel[2]))
             # print("{:.3f}, {:.3f}, {:.3f}".format(u_[0], u_[1], u_[2]))
-        if np.linalg.norm(desVel) > 0.3173:
-            desVel = desVel*0.3173/np.linalg.norm(desVel)
+            pass
+        desVel = np.maximum(-np.array([0.3, 0.3, 0.2]), np.minimum(np.array([0.3, 0.3, 0.5]), desVel))
 
         return desVel
 
@@ -156,9 +164,9 @@ class Drone:
             # print("Odometry status is: ".format(self.odomStatus))
             errPos = self.pos - self.desPos
             # print('{:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
-            if self.startFlag:
+            if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
                 self.errInt = self.errInt + errPos*self.dt
-            self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
+                self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
 
             self.desVel = self.Kpos * errPos + self.KintP * self.errInt
 
@@ -204,7 +212,7 @@ class Drone:
                 self.landCounter =  self.landCounter + 1
 
             elif self.startFlag:
-                uThrust = des_a[2] + 0.62
+                uThrust = des_a[2] + 0.63
         else:
             # print("{}: Odometry not received".format(self.name))
             pass

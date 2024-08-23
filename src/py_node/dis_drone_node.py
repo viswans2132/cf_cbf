@@ -68,8 +68,9 @@ class DroneController:
         self.drone.setMode(msg.data)
 
     def cons_cb(self, msg):
-        matrix = np.array(msg.constraints).reshape((4,-1))
-        self.drone.updateConstraintMatrices(matrix[:3,:], matrix[3,:])
+        matrix = np.array(msg.constraints).reshape((-1,4))
+        # print('Matrix: {}'.format(matrix))
+        self.drone.updateConstraintMatrices(matrix[:,:3], matrix[:,3])
 
     def land_cb(self, data):
         self.drone.landFlag = True

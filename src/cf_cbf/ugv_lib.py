@@ -11,19 +11,18 @@ import numpy as np
 
 
 
-class UGV:
-    name = 'ugv'
+class UGV(object):
+    # name = 'ugv'
     
-    pos = np.array([0.0, 0, 0])
-    quat = np.array([0.0, 0, 0, 1])
-
-    vel = np.array([0, 0.0, 0])
-    ang_vel = np.array([0.0, 0, 0])
-
-    odomStatus = False
 
     def __init__(self, name):
         self.name = name
+        self.pos = np.array([0.0, 0, 0])
+        self.quat = np.array([0.0, 0, 0, 1])
+
+        self.vel = np.array([0, 0.0, 0])
+        self.ang_vel = np.array([0.0, 0, 0])
+
 
         self.hz = 30.0
         self.dt = 1/self.hz
@@ -39,16 +38,21 @@ class UGV:
         # self.odom_sub = rospy.Subscriber('/vicon/{}/{}/odom'.format(name, name), Odometry, self.odom_cb)
         # self.cmd_sub = rospy.Subscriber('/old_cmd_vel', TwistStamped, self.oldControl_cb)
 
-        self.kRate = 2.0
-        self.kScaleD = 1.3
+        ezp = 0.5
+        theta = np.deg2rad(25)
+        d = ezp*np.tan(theta)
+
+        self.kScaleD = np.exp(1)*ezp
+        self.kRate = 1/(d*d)
+        print([self.kScaleD, self.kRate])
         self.kOffset = 0.03
-        self.omegaD = 1.0
+        self.omegaD = 1.1
         
         radius = 0.2
         self.kHeight = 1.0
-        self.kScaleA = np.sqrt(self.kHeight/radius)
+        self.kScaleA = self.kHeight/(radius*radius)
         print(self.kScaleA)
-        self.omegaA = 1.0
+        self.omegaA = 5.0
 
         self.odomStatus = False
 
@@ -71,8 +75,8 @@ class UGV:
             self.odomStatus = True
             print('Odometry Received: {}'.format(self.name))
 
-        if self.name=="demo_turtle1" and self.pos[0] < 0.6:
-            print('{:.3f}'.format(self.pos[0]))
+        # if self.name=="demo_turtle1" and self.pos[0] < 0.6:
+        #     print('{:.3f}'.format(self.pos[0]))
 
     def setStop(self, data):
         self.stop_flag = True

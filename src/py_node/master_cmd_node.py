@@ -36,11 +36,11 @@ class DroneController:
         self.t = rospy.get_time()
 
         self.drones = [DroneParameters('cf8'), DroneParameters('demo_crazyflie1')]
-        # self.drones = [DroneParameters('demo_crazyflie1')]
+        # self.drones = [DroneParameters('cf8')]
         self.ugvs = [UGV('demo_turtle2'), UGV('demo_turtle1')]
-        # self.ugvs = [UGV('demo_turtle1')]
+        # self.ugvs = [UGV('demo_turtle2')]
         self.lenDrones = len(self.drones)
-        self.rate = rospy.Rate(1)
+        self.rate = rospy.Rate(60)
         self.modeSub = rospy.Subscriber('/uav_modes', Int8Array, self.setMode)
 
         for drone in self.drones:
@@ -78,11 +78,11 @@ class DroneController:
                 if self.filterFlag: 
                     sqHorDist = sq_dist(ugvI.pos[:2] - droneI.pos[:2], np.ones((2,)))
                     ugvErrPos = droneI.pos - ugvI.pos
-                    print("{}: {:.3f}, {:.3f}, {:.3f}".format(ugvI.name, ugvI.pos[0], ugvI.pos[1], ugvI.pos[2]))
+                    # print("{}: {:.3f}, {:.3f}, {:.3f}".format(ugvI.name, ugvI.pos[0], ugvI.pos[1], ugvI.pos[2]))
                     # print("{:.3f}, {:.3f}, {:.3f}".format(droneI.pos[0], droneI.pos[1], droneI.pos[2]))
                     # print("{:.3f}, {:.3f}, {:.3f}".format(ugvErrPos[0], ugvErrPos[1], ugvErrPos[2]))
-                    if sqHorDist < 0.01 and ugvErrPos[2] < 0.05:
-                        print('Time to initiate landing')
+                    if sqHorDist < 0.0004 and ugvErrPos[2] < 0.05:
+                        # print('Time to initiate landing')
                         droneModeMsg = Int8()
                         droneModeMsg.data = 2
                         self.droneModePub[i].publish(droneModeMsg)
@@ -90,37 +90,57 @@ class DroneController:
                     else:
                         h = ugvErrPos[2] - ugvI.kRate*ugvI.kScaleD*sqHorDist*(np.exp(-ugvI.kRate*sqHorDist)) - ugvI.kOffset
                         # print('H: {}: {}'.format(h, ugvI.name))
-                        A_[i][0,0] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[0]
-                        A_[i][0,1] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[1]
+                        A_[i][0,0] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate*sqHorDist - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[0]
+                        A_[i][0,1] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate*sqHorDist - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[1]
                         A_[i][0,2] = 1
-                        b_[i] = - ugvI.omegaD*h - 2*ugvI.kRate*ugvI.kScaleD*(1 - ugvI.kRate)*np.exp(-ugvI.kRate*sqHorDist)*(ugvErrPos[0]*ugvI.vel[0] + ugvErrPos[1]*ugvI.vel[1])
-
+                        
+                        try:
+                            b_[i][0] = - ugvI.omegaD*h - 2*ugvI.kRate*ugvI.kScaleD*(1 - ugvI.kRate)*np.exp(-ugvI.kRate*sqHorDist)*(ugvErrPos[0]*ugvI.vel[0] + ugvErrPos[1]*ugvI.vel[1])
+                        except TypeError:
+                            b_[i] = - ugvI.omegaD*h - 2*ugvI.kRate*ugvI.kScaleD*(1 - ugvI.kRate)*np.exp(-ugvI.kRate*sqHorDist)*(ugvErrPos[0]*ugvI.vel[0] + ugvErrPos[1]*ugvI.vel[1])
+                        
                         j = i+1
 
                         for droneJ in self.drones[j:]:
                             droErrPos = droneI.pos - droneJ.pos
-                            if dist(droErrPos) < 0.2:
+                            if dist(droErrPos) < 2.0:
                                 h = sq_dist(droErrPos, droneI.kRad) - 1.0
                                 scaled_disp = 2*droErrPos/droneI.kRad
+                                print('h: {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format(h, droErrPos[0], droErrPos[1], droErrPos[2]))
+                                print('dhdt: {:.3f}'.format(scaled_disp@droneJ.vel))
                                 A_[i] = np.vstack((A_[i], scaled_disp))
                                 A_[j] = np.vstack((A_[j], -scaled_disp))
-                                b_[i] = np.vstack((b_[i], -droneI.omegaC*h - scaled_disp@droneJ.vel))
-                                b_[j] = np.vstack((b_[j], droneJ.omegaC*h + scaled_disp@droneI.vel))
+                                b_[i] = np.vstack((b_[i], -droneI.omegaC*h + scaled_disp@droneJ.vel))
+                                b_[j] = np.vstack((b_[j], droneJ.omegaC*h - scaled_disp@droneI.vel))
+                                # print([b_[j].shape, b_[i].shape])
+                                # print(b_)
                                 j = j+1
 
                         for ugvK in self.ugvs:
                             if ugvK != ugvI:
                                 ugvErrPos = droneI.pos - ugvK.pos
-                                if dist(ugvErrPos) < 1.5:
-                                    sqHorDist = sq_dist(ugvK.pos[:2] - droneI.pos[:2], np.array([ugvK.kScaleA, ugvK.kScaleA]))
+                                if dist(ugvErrPos) < 2.0:
+                                    sqHorDist = sq_dist(ugvK.pos[:2] - droneI.pos[:2], np.array([1,1]))
                                     h = ugvErrPos[2] - ugvK.kHeight + ugvK.kScaleA*sqHorDist
                                     A_[i] = np.vstack((A_[i], np.array([2*ugvK.kScaleA*ugvErrPos[0], 2*ugvK.kScaleA*ugvErrPos[1], 1])))
+                                    # whdhdt = -ugvK.omegaA*h + 2*ugvK.kScaleA*(ugvErrPos[0]*ugvK.vel[0] + ugvErrPos[1]*ugvK.vel[1])
+                                    # print(whdhdt)
                                     b_[i] = np.vstack((b_[i], -ugvK.omegaA*h + 2*ugvK.kScaleA*(ugvErrPos[0]*ugvK.vel[0] + ugvErrPos[1]*ugvK.vel[1])))
                         droneConsMsg = ConstraintMsg()
-                        # print(A_[i])
-                        # print(np.append(A_[i].flatten(),b_[i]))
-                        droneConsMsg.constraints = np.append(A_[i].flatten(), b_[i]).tolist()
-                        self.droneConsPub[i].publish(droneConsMsg)
+                        # print('A_: {}'.format(A_[i]))
+                        # print('b_: {}'.format(b_[i]))
+                        # # print(np.append(A_[i].flatten(),b_[i]))
+                        # print(A_[i].shape)
+                        # print(b_[i].shape)
+                        try:
+                            Ab_ = np.hstack((A_[i], b_[i].reshape((-1,1)))).flatten()
+                            # print(Ab_)
+                            # droneConsMsg.constraints = np.append(A_[i].flatten(), b_[i]).tolist()
+                            droneConsMsg.constraints = Ab_.tolist()
+                            self.droneConsPub[i].publish(droneConsMsg)
+                        except ValueError:
+                            # print([A_[i].shape, b_[i].shape, droneI.name])
+                            print('Incompatible A and b')
 
                         refMsg = PosVelMsg()
                         refMsg.position = [droneI.pos[0], droneI.pos[1], 0.5]
@@ -148,8 +168,8 @@ class DroneController:
             else:
                 # print('Odometry Not received for {}'.format(droneI.name))
                 pass
-            self.rate.sleep()
             i = i + 1
+        self.rate.sleep()
 
 
     def setMode(self, msg):

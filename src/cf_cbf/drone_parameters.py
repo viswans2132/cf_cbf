@@ -4,7 +4,7 @@ from tf.transformations import euler_from_quaternion, quaternion_matrix
 from cf_cbf.msg import DroneParamsMsg
 from nav_msgs.msg import Odometry
 
-class DroneParameters:
+class DroneParameters(object):
     name = 'drone_param'
     def __init__(self, name):    
         self.name = name
@@ -17,8 +17,8 @@ class DroneParameters:
         self.vel = np.array([0, 0.0, 0])
         self.ang_vel = np.array([0.0, 0, 0])
 
-        self.kRad = np.array([0.04, 0.04, 0.04])
-        self.omegaC = 1.0
+        self.kRad = np.array([1.0, 1.0, 1.00])
+        self.omegaC = 5.0
 
         self.odomFlag = False
         self.followFlag = False
