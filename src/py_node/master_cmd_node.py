@@ -105,7 +105,7 @@ class DroneController:
                             droErrPos = droneI.pos - droneJ.pos
                             if dist(droErrPos) < 2.0:
                                 h = sq_dist(droErrPos, droneI.kRad) - 1.0
-                                scaled_disp = 2*droErrPos/droneI.kRad
+                                scaled_disp = 2*droErrPos/(droneI.kRad*droneI.kRad)
                                 print('h: {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format(h, droErrPos[0], droErrPos[1], droErrPos[2]))
                                 print('dhdt: {:.3f}'.format(scaled_disp@droneJ.vel))
                                 A_[i] = np.vstack((A_[i], scaled_disp))
