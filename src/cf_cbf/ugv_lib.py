@@ -46,7 +46,7 @@ class UGV(object):
         self.kRate = 1/(d*d)
         print([self.kScaleD, self.kRate])
         self.kOffset = 0.03
-        self.omegaD = 1.1
+        self.omegaD = 0.7
         
         radius = 0.2
         self.kHeight = 1.0

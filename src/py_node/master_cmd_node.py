@@ -35,7 +35,7 @@ class DroneController:
 
         self.t = rospy.get_time()
 
-        self.drones = [DroneParameters('cf8'), DroneParameters('demo_crazyflie1')]
+        self.drones = [DroneParameters('dcf3'), DroneParameters('demo_crazyflie1')]
         # self.drones = [DroneParameters('cf8')]
         self.ugvs = [UGV('demo_turtle2'), UGV('demo_turtle1')]
         # self.ugvs = [UGV('demo_turtle2')]
@@ -78,10 +78,11 @@ class DroneController:
                 if self.filterFlag: 
                     sqHorDist = sq_dist(ugvI.pos[:2] - droneI.pos[:2], np.ones((2,)))
                     ugvErrPos = droneI.pos - ugvI.pos
+                    ugvErrVel = droneI.vel - ugvI.vel
                     # print("{}: {:.3f}, {:.3f}, {:.3f}".format(ugvI.name, ugvI.pos[0], ugvI.pos[1], ugvI.pos[2]))
                     # print("{:.3f}, {:.3f}, {:.3f}".format(droneI.pos[0], droneI.pos[1], droneI.pos[2]))
                     # print("{:.3f}, {:.3f}, {:.3f}".format(ugvErrPos[0], ugvErrPos[1], ugvErrPos[2]))
-                    if sqHorDist < 0.0004 and ugvErrPos[2] < 0.05:
+                    if sqHorDist < 0.0004 and ugvErrPos[2] < 0.05 and np.linalg.norm(ugvErrVel) < 0.05:
                         # print('Time to initiate landing')
                         droneModeMsg = Int8()
                         droneModeMsg.data = 2
@@ -106,12 +107,13 @@ class DroneController:
                             if dist(droErrPos) < 2.0:
                                 h = sq_dist(droErrPos, droneI.kRad) - 1.0
                                 scaled_disp = 2*droErrPos/(droneI.kRad*droneI.kRad)
-                                print('h: {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format(h, droErrPos[0], droErrPos[1], droErrPos[2]))
-                                print('dhdt: {:.3f}'.format(scaled_disp@droneJ.vel))
+                                # print('h: {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format(h, droErrPos[0], droErrPos[1], droErrPos[2]))
+                                # print('scaled_disp: {:.3f}, {:.3f}, {:.3f}'.format(scaled_disp[0], scaled_disp[1], scaled_disp[2]))
+                                # print('dhdt: {:.3f}'.format(scaled_disp@droneI.vel))
                                 A_[i] = np.vstack((A_[i], scaled_disp))
                                 A_[j] = np.vstack((A_[j], -scaled_disp))
                                 b_[i] = np.vstack((b_[i], -droneI.omegaC*h + scaled_disp@droneJ.vel))
-                                b_[j] = np.vstack((b_[j], droneJ.omegaC*h - scaled_disp@droneI.vel))
+                                b_[j] = np.vstack((b_[j], -droneJ.omegaC*h - scaled_disp@droneI.vel))
                                 # print([b_[j].shape, b_[i].shape])
                                 # print(b_)
                                 j = j+1
@@ -204,10 +206,10 @@ class DroneController:
 
     def getPosVelMsg(self, msg, offset, time):
         time =  time - self.t
-        # msg.position = [np.cos(offset + time/5), np.sin(offset + time/5), 0.5]
-        msg.position = [0, 0, 0.5]
-        # msg.velocity = [0.1*np.sin(offset + time/5), -0.1*np.cos(offset + time/5), 0.0]
-        msg.velocity = [0.0, -0.0, 0.0]
+        msg.position = [np.cos(offset + time/5), np.sin(offset + time/5), 0.8]
+        # msg.position = [0, 0, 0.5]
+        msg.velocity = [0.1*np.sin(offset + time/5), -0.1*np.cos(offset + time/5), 0.0]
+        # msg.velocity = [0.0, -0.0, 0.0]
         msg.yaw = 0.0
         msg.yawVelocity = 0.0
 

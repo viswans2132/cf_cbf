@@ -17,7 +17,7 @@ class DroneParameters(object):
         self.vel = np.array([0, 0.0, 0])
         self.ang_vel = np.array([0.0, 0, 0])
 
-        self.kRad = np.array([1.0, 1.0, 1.00])
+        self.kRad = np.array([0.3, 0.3, 0.8])
         self.omegaC = 5.0
 
         self.odomFlag = False

@@ -55,15 +55,14 @@
 
 
 	<!--============================ GROUPS ============================-->
-<!-- 
+
 	<group ns="dcf3">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 			<arg name="uri" value="$(arg uri1)" />
 			<arg name="tf_prefix" value="dcf3" />
 			<arg name="enable_logging" value="False" />
 		</include>
-		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen"/>
-	</group> -->
+	</group>
 <!-- 
 	<group ns="dcf6">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
@@ -105,14 +104,14 @@
 		</include>
 		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen"/>
 	</group>   -->
-
+<!-- 
 	 <group ns="cf8">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 		<arg name="uri" value="$(arg uri4)" />
 		<arg name="tf_prefix" value="cf8" />
 		<arg name="enable_logging" value="False" />
 		</include>
-	</group>  
+	</group>   -->
 <!-- 
 	<group ns="dcf9">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">

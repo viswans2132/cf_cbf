@@ -36,9 +36,9 @@ class Drone(object):
 
         self.Kpos = np.array([-2.5, -2.5, -0.7])
         self.Kvel = np.array([-0.5, -0.5, -0.8])
-        self.Kder = np.array([-0.05, -0.05, -0.05])
+        self.Kder = np.array([-0.05, -0.05, -0.08])
         self.KintP = np.array([-0.5, -0.5, -0.0])
-        self.KintV = np.array([-0.1, -0.1, -0.4])
+        self.KintV = np.array([-0.2, -0.2, -0.4])
         self.Kyaw = 1
 
         self.kRad = np.array([0.16, 0.16, 0.64])
@@ -130,11 +130,11 @@ class Drone(object):
 
         # desVel = u_
 
-        if self.name == "cf8":
-            # print("{:.3f}, {:.3f}, {:.3f}".format(desVel[0], desVel[1], desVel[2]))
-            # print("{:.3f}, {:.3f}, {:.3f}".format(u_[0], u_[1], u_[2]))
+        if self.name == "dcf3":
+            print("{:.3f}, {:.3f}, {:.3f}".format(desVel[0], desVel[1], desVel[2]))
+            print("{:.3f}, {:.3f}, {:.3f}".format(u_[0], u_[1], u_[2]))
             pass
-        desVel = np.maximum(-np.array([0.3, 0.3, 0.2]), np.minimum(np.array([0.3, 0.3, 0.5]), desVel))
+        desVel = np.maximum(-np.array([0.3, 0.3, 0.1]), np.minimum(np.array([0.3, 0.3, 0.5]), desVel))
 
         return desVel
 

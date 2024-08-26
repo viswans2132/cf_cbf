@@ -6,9 +6,9 @@
 			<param name="uav_name" value="demo_crazyflie1" />
 		</node>
 	</group> 
-	<group ns="cf8">
+	<group ns="dcf3">
 		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen">
-			<param name="uav_name" value="cf8" />
+			<param name="uav_name" value="dcf3" />
 		</node>
 	</group> 
 
