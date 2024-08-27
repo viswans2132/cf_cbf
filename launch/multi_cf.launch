@@ -56,24 +56,21 @@
 
 	<!--============================ GROUPS ============================-->
 
-	<group ns="dcf3">
+	<!-- <group ns="dcf3">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 			<arg name="uri" value="$(arg uri1)" />
 			<arg name="tf_prefix" value="dcf3" />
 			<arg name="enable_logging" value="False" />
 		</include>
-	</group>
-<!-- 
+	</group> -->
+
 	<group ns="dcf6">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 			<arg name="uri" value="$(arg uri2)" />
 			<arg name="tf_prefix" value="dcf6" />
 			<arg name="enable_logging" value="False" />
 		</include>
-		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen" >
-			<param name="uav_name" value="dcf6" />
-		</node>
-	</group>   -->
+	</group>  
 
 	<group ns="demo_crazyflie1">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
@@ -82,7 +79,7 @@
 			<arg name="enable_logging" value="False" />
 		</include>
 
-	</group>  <!-- 
+	</group>  
 
 	<group ns="dcf2">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
@@ -90,11 +87,7 @@
 			<arg name="tf_prefix" value="dcf2" />
 			<arg name="enable_logging" value="False" />
 		</include>
-
-		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen">
-			<param name="uav_name" value="dcf2" />
-		</node>
-	</group>   -->
+	</group>  
 <!-- 
 	<group ns="dcf13">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
@@ -136,7 +129,7 @@
 
 
 	<!-- run vicon bridge  -->
-	<include file="$(find ros_viconstream)/launch/viconstream.launch"/>
+	<!-- <include file="$(find ros_viconstream)/launch/viconstream.launch"/> -->
 	<!-- <node pkg="cf_cbf" name="guardian_node" type="master_cmd_node.py"/> -->
 
 </launch>

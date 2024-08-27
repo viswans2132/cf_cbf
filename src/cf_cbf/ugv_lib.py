@@ -48,11 +48,11 @@ class UGV(object):
         self.kOffset = 0.03
         self.omegaD = 0.7
         
-        radius = 0.2
+        radius = 0.4
         self.kHeight = 1.0
         self.kScaleA = self.kHeight/(radius*radius)
         print(self.kScaleA)
-        self.omegaA = 5.0
+        self.omegaA = 3.0
 
         self.odomStatus = False
 

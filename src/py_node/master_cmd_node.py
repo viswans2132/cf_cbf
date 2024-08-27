@@ -35,9 +35,9 @@ class DroneController:
 
         self.t = rospy.get_time()
 
-        self.drones = [DroneParameters('dcf3'), DroneParameters('demo_crazyflie1')]
+        self.drones = [DroneParameters('dcf6'), DroneParameters('dcf2'), DroneParameters('demo_crazyflie1')]
         # self.drones = [DroneParameters('cf8')]
-        self.ugvs = [UGV('demo_turtle2'), UGV('demo_turtle1')]
+        self.ugvs = [UGV('demo_turtle3'), UGV('demo_turtle2'), UGV('demo_turtle1')]
         # self.ugvs = [UGV('demo_turtle2')]
         self.lenDrones = len(self.drones)
         self.rate = rospy.Rate(60)
@@ -78,7 +78,7 @@ class DroneController:
                 if self.filterFlag: 
                     sqHorDist = sq_dist(ugvI.pos[:2] - droneI.pos[:2], np.ones((2,)))
                     ugvErrPos = droneI.pos - ugvI.pos
-                    ugvErrVel = droneI.vel - ugvI.vel
+                    ugvErrVel = droneI.vel[:2] - ugvI.vel[:2]
                     # print("{}: {:.3f}, {:.3f}, {:.3f}".format(ugvI.name, ugvI.pos[0], ugvI.pos[1], ugvI.pos[2]))
                     # print("{:.3f}, {:.3f}, {:.3f}".format(droneI.pos[0], droneI.pos[1], droneI.pos[2]))
                     # print("{:.3f}, {:.3f}, {:.3f}".format(ugvErrPos[0], ugvErrPos[1], ugvErrPos[2]))
