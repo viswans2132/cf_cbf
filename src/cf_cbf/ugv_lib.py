@@ -39,13 +39,13 @@ class UGV(object):
         # self.cmd_sub = rospy.Subscriber('/old_cmd_vel', TwistStamped, self.oldControl_cb)
 
         ezp = 0.5
-        theta = np.deg2rad(25)
+        theta = np.deg2rad(30)
         d = ezp*np.tan(theta)
 
         self.kScaleD = np.exp(1)*ezp
         self.kRate = 1/(d*d)
         print([self.kScaleD, self.kRate])
-        self.kOffset = 0.03
+        self.kOffset = 0.0
         self.omegaD = 0.7
         
         radius = 0.4
@@ -63,7 +63,7 @@ class UGV(object):
     def odom_cb(self, data):
         self.pos[0] = float(data.pose.pose.position.x)
         self.pos[1] = float(data.pose.pose.position.y)
-        self.pos[2] = float(data.pose.pose.position.z) + 0.03
+        self.pos[2] = float(data.pose.pose.position.z) + 0.08
         self.quat[0] = float(data.pose.pose.orientation.x)
         self.quat[1] = float(data.pose.pose.orientation.y)
         self.quat[2] = float(data.pose.pose.orientation.z)

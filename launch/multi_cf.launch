@@ -7,13 +7,13 @@
 	<arg name="y13" default="4" />
 	<arg name="z13" default="0.5" /> 
 	
-	<arg name="uri1" default="radio://0/50/2M/E7E7E7E7E3" /> 
+	<arg name="uri1" default="radio://1/50/2M/E7E7E7E7E3" /> 
 	<arg name="frame1" default="cf7/cf7" />
 	<arg name="x1" default="0" />
 	<arg name="y1" default="4" />
 	<arg name="z1" default="0.5" />  
 
-	<arg name="uri2" default="radio://0/80/2M/E7E7E7E7E6" />
+	<arg name="uri2" default="radio://1/80/2M/E7E7E7E7E6" />
 	<arg name="frame2" default="dcf6/dcf6" />
 	<arg name="x2" default="0" />
 	<arg name="y2" default="4" />
@@ -31,11 +31,11 @@
 	<arg name="y4" default="4" />
 	<arg name="z4" default="0.5" /> 
 
-	<arg name="uri5" default="radio://0/12/2M/E7E7E7E7E8" />
-	<arg name="frame5" default="dcf9/dcf9" />
-	<arg name="x5" default="1" />
-	<arg name="y5" default="3" />
-	<arg name="z5" default="0.5" /> 
+	<arg name="uri5" default="radio://0/80/2M/E7E7E7E7E5" />
+	<arg name="frame5" default="dcf5/dcf5" />
+	<arg name="x5" default="0" />
+	<arg name="y5" default="4" />
+	<arg name="z5" default="0.5" />
 
 	<arg name="uri6" default="radio://0/12/2M/E7E7E7E704" />
 	<arg name="frame6" default="cf4/cf4" />
@@ -56,14 +56,14 @@
 
 	<!--============================ GROUPS ============================-->
 
-	<!-- <group ns="dcf3">
+<!-- 	<group ns="dcf3">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 			<arg name="uri" value="$(arg uri1)" />
 			<arg name="tf_prefix" value="dcf3" />
 			<arg name="enable_logging" value="False" />
 		</include>
-	</group> -->
-
+	</group>
+ -->
 	<group ns="dcf6">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 			<arg name="uri" value="$(arg uri2)" />
@@ -105,15 +105,14 @@
 		<arg name="enable_logging" value="False" />
 		</include>
 	</group>   -->
-<!-- 
-	<group ns="dcf9">
+
+	<group ns="dcf5">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 		<arg name="uri" value="$(arg uri5)" />
-		<arg name="tf_prefix" value="dcf9" />
+		<arg name="tf_prefix" value="dcf5" />
 		<arg name="enable_logging" value="False" />
 		</include>
-		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen"/>
-	</group>   -->
+	</group>  
 <!-- 
 	<group ns="cf4">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">

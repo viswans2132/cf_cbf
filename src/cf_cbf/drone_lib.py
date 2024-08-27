@@ -37,8 +37,10 @@ class Drone(object):
         self.Kpos = np.array([-2.5, -2.5, -0.7])
         self.Kvel = np.array([-0.5, -0.5, -0.8])
         self.Kder = np.array([-0.05, -0.05, -0.08])
+        # self.Kder = np.array([-0.05, -0.05, -0.05])
         self.KintP = np.array([-0.5, -0.5, -0.0])
-        self.KintV = np.array([-0.2, -0.2, -0.4])
+        self.KintV = np.array([-0.2, -0.2, -0.2])
+        # self.KintV = np.array([-0.0, -0.0, -0.05])
         self.Kyaw = 1
 
         self.kRad = np.array([0.16, 0.16, 0.64])
@@ -50,6 +52,9 @@ class Drone(object):
         self.filterFlag = False
         self.followFlag = False
         self.returnFlag = False
+
+        self.landTimerMax = 30
+        self.decrement = 0.03
 
         self.maxInt = np.array([0.0, 0.0, 0.0])
         self.maxVelInt = np.array([0.3, 0.3, 0.5])
@@ -70,7 +75,15 @@ class Drone(object):
         self.quat[1] = quat[1]
         self.quat[2] = quat[2]
         self.quat[3] = quat[3]
+
+        if np.absolute(self.quat[3]) < 0.8 or np.absolute(self.quat[2]) > 0.3 or np.absolute(self.quat[1]) > 0.5 or np.absolute(self.quat[0]) > 0.5:
+            self.landFlag = True
+            self.landTimerMax = 2
+            self.decrement = 0.5
+
+
         self.yaw = euler_from_quaternion(self.quat)[2]
+
         R_inv = quaternion_matrix(self.quat)[:-1, :-1]
         # self.R = np.linalg.inv(R_inv)
         self.R = np.array([[np.cos(self.yaw), np.sin(self.yaw), 0], [-np.sin(self.yaw), np.cos(self.yaw), 0], [0, 0, 1]])
@@ -110,6 +123,9 @@ class Drone(object):
         elif data == 2:
             if self.landFlag == False:
                 print('landing {}'.format(self.name))
+                if self.pos[2] > 0.5:
+                    self.decrement = 0.01
+                    self.landTimerMax = 60
             self.landFlag = True
 
     def filterValues(self, err, u_):
@@ -130,10 +146,10 @@ class Drone(object):
 
         # desVel = u_
 
-        if self.name == "dcf3":
-            print("{:.3f}, {:.3f}, {:.3f}".format(desVel[0], desVel[1], desVel[2]))
-            print("{:.3f}, {:.3f}, {:.3f}".format(u_[0], u_[1], u_[2]))
-            pass
+        # if self.name == "dcf3":
+        #     print("{:.3f}, {:.3f}, {:.3f}".format(desVel[0], desVel[1], desVel[2]))
+        #     print("{:.3f}, {:.3f}, {:.3f}".format(u_[0], u_[1], u_[2]))
+        #     pass
         desVel = np.maximum(-np.array([0.3, 0.3, 0.1]), np.minimum(np.array([0.3, 0.3, 0.5]), desVel))
 
         return desVel
@@ -202,8 +218,8 @@ class Drone(object):
 
             if self.landFlag:
                 self.startFlag = False
-                uThrust = 0.6 - self.landCounter*0.03
-                if self.landCounter > 30:
+                uThrust = 0.59 - self.landCounter*self.decrement
+                if self.landCounter > self.landTimerMax:
                     uThrust = 0.0
                     uRoll = 0.0
                     uPitch = 0.0

@@ -24,6 +24,8 @@ class DroneController:
         self.name = name
 
         self.drone = Drone(name)
+        if self.name == 'dcf5':
+            self.drone.KintV = np.array([-0.02, -0.02, -0.4])
         self.rate = rospy.Rate(30)
         self.followSub = rospy.Subscriber('/{}/uav_mode'.format(self.drone.name), Int8, self.setMode)
         # self.landingSub = rospy.Subscriber('/{}/land'.format(self.drone.name), Bool, self.land_cb)

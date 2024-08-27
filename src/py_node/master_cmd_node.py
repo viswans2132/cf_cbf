@@ -35,9 +35,9 @@ class DroneController:
 
         self.t = rospy.get_time()
 
-        self.drones = [DroneParameters('dcf6'), DroneParameters('dcf2'), DroneParameters('demo_crazyflie1')]
+        self.drones = [DroneParameters('dcf6'), DroneParameters('dcf5'), DroneParameters('dcf2'), DroneParameters('demo_crazyflie1')]
         # self.drones = [DroneParameters('cf8')]
-        self.ugvs = [UGV('demo_turtle3'), UGV('demo_turtle2'), UGV('demo_turtle1')]
+        self.ugvs = [UGV('demo_turtle4'), UGV('demo_turtle3'), UGV('demo_turtle2'), UGV('demo_turtle1')]
         # self.ugvs = [UGV('demo_turtle2')]
         self.lenDrones = len(self.drones)
         self.rate = rospy.Rate(60)
@@ -81,8 +81,7 @@ class DroneController:
                     ugvErrVel = droneI.vel[:2] - ugvI.vel[:2]
                     # print("{}: {:.3f}, {:.3f}, {:.3f}".format(ugvI.name, ugvI.pos[0], ugvI.pos[1], ugvI.pos[2]))
                     # print("{:.3f}, {:.3f}, {:.3f}".format(droneI.pos[0], droneI.pos[1], droneI.pos[2]))
-                    # print("{:.3f}, {:.3f}, {:.3f}".format(ugvErrPos[0], ugvErrPos[1], ugvErrPos[2]))
-                    if sqHorDist < 0.0004 and ugvErrPos[2] < 0.05 and np.linalg.norm(ugvErrVel) < 0.05:
+                    if sqHorDist < 0.0003 and ugvErrPos[2] < 0.01 and np.linalg.norm(ugvErrVel) < 0.5:
                         # print('Time to initiate landing')
                         droneModeMsg = Int8()
                         droneModeMsg.data = 2
@@ -90,6 +89,8 @@ class DroneController:
 
                     else:
                         h = ugvErrPos[2] - ugvI.kRate*ugvI.kScaleD*sqHorDist*(np.exp(-ugvI.kRate*sqHorDist)) - ugvI.kOffset
+                        if droneI.name == 'dcf5':
+                            print("{:.3f}, {:.3f}, {:.3f}, {:.3f}".format(h, ugvErrPos[0], ugvErrPos[1], ugvErrPos[2]))
                         # print('H: {}: {}'.format(h, ugvI.name))
                         A_[i][0,0] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate*sqHorDist - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[0]
                         A_[i][0,1] = 2*ugvI.kRate*ugvI.kScaleD*(ugvI.kRate*sqHorDist - 1)*np.exp(-ugvI.kRate*sqHorDist)*ugvErrPos[1]
