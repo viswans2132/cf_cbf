@@ -52,10 +52,10 @@ catkin_python_setup()
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  PosVelMsg.msg
-  ConstraintMsg.msg
+  DronePosVelMsg.msg
+  DroneConstraintMsg.msg
   DroneParamsMsg.msg
-  Int8Array.msg
+  DroneInt8Array.msg
 )
 
 ## Generate services in the 'srv' folder

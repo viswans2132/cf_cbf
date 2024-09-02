@@ -6,7 +6,7 @@ from std_msgs.msg import String
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Twist, PoseStamped
 from std_msgs.msg import Header, Int8
-from cf_cbf.msg import PosVelMsg, ConstraintMsg, DroneParamsMsg
+from cf_cbf.msg import DronePosVelMsg, DroneConstraintMsg, DroneParamsMsg
 import time
 import numpy as np
 import sys
@@ -28,11 +28,10 @@ class DroneController:
             self.drone.KintV = np.array([-0.02, -0.02, -0.4])
         self.rate = rospy.Rate(30)
         self.followSub = rospy.Subscriber('/{}/uav_mode'.format(self.drone.name), Int8, self.setMode)
-        # self.landingSub = rospy.Subscriber('/{}/land'.format(self.drone.name), Bool, self.land_cb)
 
         self.droneOdomSub = rospy.Subscriber('/vicon/{}/{}/odom'.format(self.drone.name, self.drone.name), Odometry, self.odom_cb)
-        self.droneRefSub = rospy.Subscriber('/{}/ref'.format(self.drone.name), PosVelMsg, self.ref_cb)
-        self.droneConsSub = rospy.Subscriber('/{}/cons'.format(self.drone.name), ConstraintMsg, self.cons_cb)
+        self.droneRefSub = rospy.Subscriber('/{}/ref'.format(self.drone.name), DronePosVelMsg, self.ref_cb)
+        self.droneConsSub = rospy.Subscriber('/{}/cons'.format(self.drone.name), DroneConstraintMsg, self.cons_cb)
         self.droneCmdPub = rospy.Publisher('/{}/cmd_vel'.format(self.drone.name), Twist, queue_size=10)
         self.droneParamPub = rospy.Publisher('/{}/param'.format(self.drone.name), DroneParamsMsg, queue_size=10)
 
