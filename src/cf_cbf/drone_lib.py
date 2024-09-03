@@ -87,9 +87,10 @@ class Drone(object):
         R_inv = quaternion_matrix(self.quat)[:-1, :-1]
         # self.R = np.linalg.inv(R_inv)
         self.R = np.array([[np.cos(self.yaw), np.sin(self.yaw), 0], [-np.sin(self.yaw), np.cos(self.yaw), 0], [0, 0, 1]])
-        self.vel[0] = velocity[0]
-        self.vel[1] = velocity[1]
-        self.vel[2] = velocity[2]
+        self.vel = self.R_inv.T.dot(np.array([velocity[0], velocity[1], velocity[2]]))
+        # self.vel[0] = velocity[0]
+        # self.vel[1] = velocity[1]
+        # self.vel[2] = velocity[2]
         self.ang_vel[2] = velocity[3]
 
         if self.odomStatus == False:
