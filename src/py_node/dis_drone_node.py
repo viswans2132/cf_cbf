@@ -63,7 +63,7 @@ class DroneController:
             self.cmdVelMsg.linear.z = self.cmdArray[3]
             self.cmdVelMsg.angular.z = self.cmdArray[2]
             self.droneCmdPub.publish(self.cmdVelMsg)
-            self.rate.sleep()
+        self.rate.sleep()
 
     def setMode(self, msg):
         self.drone.setMode(msg.data)

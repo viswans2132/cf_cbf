@@ -76,7 +76,7 @@ class Drone(object):
         self.quat[2] = quat[2]
         self.quat[3] = quat[3]
 
-        if np.absolute(self.quat[3]) < 0.8 or np.absolute(self.quat[2]) > 0.3 or np.absolute(self.quat[1]) > 0.5 or np.absolute(self.quat[0]) > 0.5:
+        if np.absolute(self.quat[3]) < 0.8 or np.absolute(self.quat[2]) > 0.4 or np.absolute(self.quat[1]) > 0.5 or np.absolute(self.quat[0]) > 0.5:
             self.landFlag = True
             self.landTimerMax = 2
             self.decrement = 0.5
@@ -87,7 +87,7 @@ class Drone(object):
         R_inv = quaternion_matrix(self.quat)[:-1, :-1]
         # self.R = np.linalg.inv(R_inv)
         self.R = np.array([[np.cos(self.yaw), np.sin(self.yaw), 0], [-np.sin(self.yaw), np.cos(self.yaw), 0], [0, 0, 1]])
-        self.vel = self.R_inv.T.dot(np.array([velocity[0], velocity[1], velocity[2]]))
+        self.vel = R_inv.T.dot(np.array([velocity[0], velocity[1], velocity[2]]))
         # self.vel[0] = velocity[0]
         # self.vel[1] = velocity[1]
         # self.vel[2] = velocity[2]
@@ -202,10 +202,10 @@ class Drone(object):
             des_a = self.Kvel * self.errVel + self.Kder * derVel + self.KintV * self.errVelInt
             # des_a = self.Kvel * self.errVel
             des_a = self.R.dot(des_a)
-            # print("Error: {0:.3f}: {1:.3f}: {2:.3f}: \n Acc: {3:.3f}: {4:.3f}: {5:.3f}".format(self.errVel[0], errPos[1], errPos[2], des_a[0], des_a[1], des_a[2]))
             # print(des_a)
             # print(des_a[3])
             des_a = np.maximum(-self.maxAcc, np.minimum(self.maxAcc, des_a))
+            # print("Error: {0:.3f}: {1:.3f}: {2:.3f}: \n Acc: {3:.3f}: {4:.3f}: {5:.3f}".format(self.errVel[0], errPos[1], errPos[2], des_a[0], des_a[1], des_a[2]))
             # print("{:.3f}: {:.3f}: {:.3f}".format(errPos[0], errPos[1], errPos[2]))
 
             # yaw_diff = np.minimum(0.2, np.maximum(self.desYaw - self.yaw, -0.2))
@@ -230,6 +230,7 @@ class Drone(object):
 
             elif self.startFlag:
                 uThrust = des_a[2] + 0.63
+            # print("thrust: {}".format(uThrust))
         else:
             # print("{}: Odometry not received".format(self.name))
             pass
@@ -239,8 +240,8 @@ class Drone(object):
         velArray[2] = uYaw
         velArray[3] = uThrust
 
-        return self.odomStatus
         # print("{}: {:.3f}: {:.3f}: {:.3f}: {:.3f}: Ready to publish".format(self.name, uPitch, uRoll, uYaw, uThrust))
+        return self.odomStatus
 
 
         # self.cmdPub.publish(velMsg)
