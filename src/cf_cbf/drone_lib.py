@@ -56,9 +56,9 @@ class Drone(object):
         self.landTimerMax = 30
         self.decrement = 0.03
 
-        self.maxInt = np.array([0.0, 0.0, 0.0])
+        self.maxInt = np.array([0.3, 0.3, 0.0])
         self.maxVelInt = np.array([0.3, 0.3, 0.5])
-        self.maxAcc = np.array([0.25, 0.25, 0.3])
+        self.maxAcc = np.array([0.3, 0.3, 0.3])
 
         self.A = np.zeros((3,))
         self.b = 0.0
@@ -151,7 +151,10 @@ class Drone(object):
         #     print("{:.3f}, {:.3f}, {:.3f}".format(desVel[0], desVel[1], desVel[2]))
         #     print("{:.3f}, {:.3f}, {:.3f}".format(u_[0], u_[1], u_[2]))
         #     pass
-        desVel = np.maximum(-np.array([0.3, 0.3, 0.1]), np.minimum(np.array([0.3, 0.3, 0.5]), desVel))
+        try:
+            desVel = np.maximum(-np.array([0.3, 0.3, 0.1]), np.minimum(np.array([0.3, 0.3, 0.5]), desVel))
+        except TypeError:
+            desVel = np.array([0,0.0,0])
 
         return desVel
 
@@ -180,7 +183,7 @@ class Drone(object):
         if self.odomStatus:
             # print("Odometry status is: ".format(self.odomStatus))
             errPos = self.pos - self.desPos
-            # print('{:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
+            # print('Error: {:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
             if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
                 self.errInt = self.errInt + errPos*self.dt
                 self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
