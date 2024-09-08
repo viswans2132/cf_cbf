@@ -3,7 +3,7 @@
 	<arg name="uav_name" default="$(env DRONE_NUMBER)" doc="choose: {dcf5, dcf6, dcf2}"/>
 	<group ns="$(arg uav_name)">
 		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen">
-			<param name="uav_name" value="$(arg uav_name" />
+			<param name="uav_name" value="$(arg uav_name)" />
 		</node>
 	</group> 
 </launch>
