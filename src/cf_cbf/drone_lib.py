@@ -21,7 +21,7 @@ class Drone(object):
         self.vel = np.array([0, 0.0, 0])
         self.ang_vel = np.array([0.0, 0, 0])
 
-        self.desPos = np.array([0.0, 0.0, 0.7])
+        self.desPos = np.array([0.0, 0.0, 0.6])
         self.desVel = np.array([0.0, 0, 0])
         self.desYaw = 0.0
         self.desYawVel = 0.0
@@ -152,7 +152,7 @@ class Drone(object):
         #     print("{:.3f}, {:.3f}, {:.3f}".format(u_[0], u_[1], u_[2]))
         #     pass
         try:
-            desVel = np.maximum(-np.array([0.3, 0.3, 0.1]), np.minimum(np.array([0.3, 0.3, 0.5]), desVel))
+            desVel = np.maximum(-np.array([0.3, 0.3, 0.2]), np.minimum(np.array([0.3, 0.3, 0.4]), desVel))
         except TypeError:
             desVel = np.array([0,0.0,0])
 
@@ -188,14 +188,14 @@ class Drone(object):
                 self.errInt = self.errInt + errPos*self.dt
                 self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
 
-            self.desVel = self.Kpos * errPos + self.KintP * self.errInt
+            desVel2 = self.Kpos * errPos + self.KintP * self.errInt + self.desVel
 
             if self.filterFlag:
-                self.desVel = self.filterValues(errPos, self.desVel)
+                desVel2 = self.filterValues(errPos, desVel2)
 
 
-            derVel = ((self.vel - self.desVel) - self.errVel)/self.dt
-            self.errVel = self.vel - self.desVel
+            derVel = ((self.vel - desVel2) - self.errVel)/self.dt
+            self.errVel = self.vel - desVel2
 
             if self.startFlag:
                 self.errVelInt = self.errVelInt + self.errVel*self.dt

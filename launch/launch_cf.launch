@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="dcf2" default="false" />
+	<arg name="dcf5" default="false" />
+	<arg name="dcf6" default="false" />
+
+
+	<include file="$(find crazyflie_driver)/launch/crazyflie_server.launch">
+	</include>
+
+	<group if="$(arg dcf6)" >
+		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
+			<arg name="uri" value="radio://0/80/2M/E7E7E7E7E6" />
+			<arg name="tf_prefix" value="dcf6" />
+			<arg name="enable_logging" value="False" />
+		</include>
+	</group>
+	<group if="$(arg dcf5)" >
+		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
+			<arg name="uri" value="radio://0/80/2M/E7E7E7E7E5" />
+			<arg name="tf_prefix" value="dcf5" />
+			<arg name="enable_logging" value="False" />
+		</include>
+	</group>
+	<group if="$(arg dcf2)" >
+		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
+			<arg name="uri" value="radio://0/80/2M/E7E7E7E7E2" />
+			<arg name="tf_prefix" value="dcf5" />
+			<arg name="enable_logging" value="False" />
+		</include>
+	</group>  
+
+</launch>
