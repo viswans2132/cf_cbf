@@ -96,6 +96,7 @@ class Drone(object):
         if self.odomStatus == False:
             self.desPos[0] = self.pos[0]
             self.desPos[1] = self.pos[1]
+            print('Odometry Received')
         self.odomStatus = True
         # print('odom_received')
 
@@ -147,7 +148,7 @@ class Drone(object):
 
         # desVel = u_
 
-        # if self.name == "dcf3":
+        # if self.name == "dcf6":
         #     print("{:.3f}, {:.3f}, {:.3f}".format(desVel[0], desVel[1], desVel[2]))
         #     print("{:.3f}, {:.3f}, {:.3f}".format(u_[0], u_[1], u_[2]))
         #     pass
@@ -183,7 +184,8 @@ class Drone(object):
         if self.odomStatus:
             # print("Odometry status is: ".format(self.odomStatus))
             errPos = self.pos - self.desPos
-            # print('Error: {:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
+            if self.name == "cf8":
+                print('Error: {:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
             if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
                 self.errInt = self.errInt + errPos*self.dt
                 self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
@@ -222,7 +224,7 @@ class Drone(object):
 
             if self.landFlag:
                 self.startFlag = False
-                uThrust = 0.59 - self.landCounter*self.decrement
+                uThrust = 0.54 - self.landCounter*self.decrement
                 if self.landCounter > self.landTimerMax:
                     uThrust = 0.0
                     uRoll = 0.0
