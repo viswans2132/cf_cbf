@@ -184,8 +184,8 @@ class Drone(object):
         if self.odomStatus:
             # print("Odometry status is: ".format(self.odomStatus))
             errPos = self.pos - self.desPos
-            if self.name == "cf8":
-                print('Error: {:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
+            # if self.name == "cf8":
+            #     print('Error: {:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
             if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
                 self.errInt = self.errInt + errPos*self.dt
                 self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
