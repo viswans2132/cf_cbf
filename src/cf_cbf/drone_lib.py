@@ -21,7 +21,7 @@ class Drone(object):
         self.vel = np.array([0, 0.0, 0])
         self.ang_vel = np.array([0.0, 0, 0])
 
-        self.desPos = np.array([0.0, 0.0, 0.6])
+        self.desPos = np.array([0.0, 0.0, 0.8])
         self.desVel = np.array([0.0, 0, 0])
         self.desYaw = 0.0
         self.desYawVel = 0.0
@@ -39,11 +39,11 @@ class Drone(object):
         self.Kder = np.array([-0.05, -0.05, -0.08])
         # self.Kder = np.array([-0.05, -0.05, -0.05])
         self.KintP = np.array([-0.5, -0.5, -0.0])
-        self.KintV = np.array([-0.2, -0.2, -0.2])
+        self.KintV = np.array([-0.0, -0.0, -0.2])
         # self.KintV = np.array([-0.0, -0.0, -0.05])
         self.Kyaw = 1
 
-        self.kRad = np.array([0.16, 0.16, 0.64])
+        self.kRad = np.array([0.3, 0.3, 0.8])
         self.omegaC = 1.0
 
         self.landCounter = 0.0
@@ -54,7 +54,7 @@ class Drone(object):
         self.returnFlag = False
 
         self.landTimerMax = 30
-        self.decrement = 0.03
+        self.decrement = 0.04
 
         self.maxInt = np.array([0.3, 0.3, 0.0])
         self.maxVelInt = np.array([0.3, 0.3, 0.5])
@@ -76,7 +76,7 @@ class Drone(object):
         self.quat[2] = quat[2]
         self.quat[3] = quat[3]
 
-        if np.absolute(self.quat[3]) < 0.8 or np.absolute(self.quat[2]) > 0.4 or np.absolute(self.quat[1]) > 0.5 or np.absolute(self.quat[0]) > 0.5:
+        if np.absolute(self.quat[1]) > 0.5 or np.absolute(self.quat[0]) > 0.5:
             self.landFlag = True
             self.landTimerMax = 2
             self.decrement = 0.5
@@ -116,6 +116,7 @@ class Drone(object):
         if data == 0:
             self.filterFlag = True
             self.followFlag = True
+            self.landFlag = False
             print('filter: ON {}'.format(self.name))
         elif data == 1:
             if self.startFlag and self.filterFlag and self.followFlag:
@@ -176,6 +177,38 @@ class Drone(object):
     def odomStatus(self):
         return self.odomStatus
 
+    def generateVelocityInputs(self, velArray):
+        desVel2 = np.array([0.0, 0.0, 0.0])
+        if self.odomStatus:
+            # print("Odometry status is: ".format(self.odomStatus))
+            errPos = self.pos - self.desPos
+            # if self.name == "dcf2":
+            # print('Error: {:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
+            if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
+                self.errInt = self.errInt + errPos*self.dt
+                self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
+
+            desVel2 = self.Kpos * errPos + self.KintP * self.errInt + self.desVel
+
+            if self.filterFlag:
+                desVel2 = self.filterValues(errPos, desVel2)
+
+        if self.landFlag:
+            print('landing')
+            self.startFlag = False
+            self.filterFlag = 0.0
+            velArray[2] = -2.5
+            velArray[3] = 0.0
+
+
+        else:
+            velArray[0] = desVel2[0]
+            velArray[1] = desVel2[1]
+            velArray[2] = desVel2[2]
+        return self.odomStatus
+
+
+
     def generateControlInputs(self, velArray):
         uPitch = 0.0
         uRoll = 0.0
@@ -184,8 +217,8 @@ class Drone(object):
         if self.odomStatus:
             # print("Odometry status is: ".format(self.odomStatus))
             errPos = self.pos - self.desPos
-            # if self.name == "cf8":
-            #     print('Error: {:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
+            # if self.name == "dcf2":
+            # print('{}: Error: {:.3f}, {:.3f}, {:.3f}'.format(self.name, errPos[0], errPos[1], errPos[2]))
             if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
                 self.errInt = self.errInt + errPos*self.dt
                 self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
@@ -224,11 +257,13 @@ class Drone(object):
 
             if self.landFlag:
                 self.startFlag = False
+                self.filterFlag = False
+                # print('{}: Landing')
                 uThrust = 0.54 - self.landCounter*self.decrement
+                uRoll = 0.0
+                uPitch = 0.0
                 if self.landCounter > self.landTimerMax:
                     uThrust = 0.0
-                    uRoll = 0.0
-                    uPitch = 0.0
                     uyaw = 0.0
 
                 self.landCounter =  self.landCounter + 1

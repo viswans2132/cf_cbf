@@ -4,7 +4,7 @@ import rospy
 import pkg_resources
 from std_msgs.msg import String
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Twist, PoseStamped
+from geometry_msgs.msg import TwistStamped, PoseStamped
 from std_msgs.msg import Header, Int8
 from cf_cbf.msg import DronePosVelMsg, DroneConstraintMsg, DroneParamsMsg
 import time
@@ -24,22 +24,24 @@ class DroneController:
         self.name = name
 
         self.drone = Drone(name)
-        if self.name == 'dcf5':
-            self.drone.KintV = np.array([-0.02, -0.02, -0.4])
         self.rate = rospy.Rate(30)
         self.followSub = rospy.Subscriber('/{}/uav_mode'.format(self.drone.name), Int8, self.setMode)
 
-        self.droneOdomSub = rospy.Subscriber('/vicon/{}/{}/odom'.format(self.drone.name, self.drone.name), Odometry, self.odom_cb)
+        self.droneOdomSub = rospy.Subscriber('/{}/odometry_sensor1/odometry'.format(self.drone.name, self.drone.name), Odometry, self.odom_cb)
         self.droneRefSub = rospy.Subscriber('/{}/ref'.format(self.drone.name), DronePosVelMsg, self.ref_cb)
         self.droneConsSub = rospy.Subscriber('/{}/cons'.format(self.drone.name), DroneConstraintMsg, self.cons_cb)
-        self.droneCmdPub = rospy.Publisher('/{}/cmd_vel'.format(self.drone.name), Twist, queue_size=10)
+        self.droneCmdPub = rospy.Publisher('/{}/vel_msg'.format(self.drone.name), TwistStamped, queue_size=10)
         self.droneParamPub = rospy.Publisher('/{}/param'.format(self.drone.name), DroneParamsMsg, queue_size=10)
+        self.landSignal = rospy.Publisher('/{}/land_signal'.format(self.drone.name), Int8, queue_size=10)
 
-        self.cmdVelMsg = Twist()
+        self.cmdVelMsg = TwistStamped()
         self.cmdArray = np.array([0,0,0,0.0])
 
         time.sleep(1)
         print('Node {}: Awake'.format(self.name))
+
+        self.drone.kRad = np.array([0.6, 0.6, 1.20])
+
 
         paramMsg = DroneParamsMsg()
         paramMsg.kRad = self.drone.kRad
@@ -54,17 +56,21 @@ class DroneController:
 
 
     def loop(self):
-        odomReceived = self.drone.generateControlInputs(self.cmdArray)
-        if self.name == "dcf2":
-            print('Odometry: {}'.format(odomReceived))
+        odomReceived = self.drone.generateVelocityInputs(self.cmdArray)
         if rospy.get_time() - self.timer > 0.2:
             self.drone.landFlag = True
         if odomReceived:
-            self.cmdVelMsg.linear.x = self.cmdArray[0]
-            self.cmdVelMsg.linear.y = self.cmdArray[1]
-            self.cmdVelMsg.linear.z = self.cmdArray[3]
-            self.cmdVelMsg.angular.z = self.cmdArray[2]
+            self.cmdVelMsg.twist.linear.x = self.cmdArray[0]
+            self.cmdVelMsg.twist.linear.y = self.cmdArray[1]
+            self.cmdVelMsg.twist.linear.z = self.cmdArray[2]
             self.droneCmdPub.publish(self.cmdVelMsg)
+
+            if self.drone.landFlag:
+                landMsg = Int8()
+                landMsg.data = 1
+                self.landSignal.publish(landMsg)
+
+
         self.rate.sleep()
 
     def setMode(self, msg):
@@ -107,7 +113,7 @@ class DroneController:
 
 if __name__ == '__main__':
      try:
-        rospy.init_node('crazyflie_controller', anonymous=True)
+        rospy.init_node('drone_controller', anonymous=True)
         uav_name = rospy.get_param('~uav_name')
         dc = DroneController(uav_name)
      except rospy.ROSInterruptException:

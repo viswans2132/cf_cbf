@@ -105,14 +105,14 @@
 		<arg name="enable_logging" value="False" />
 		</include>
 	</group>  
-
+<!-- 
 	<group ns="dcf5">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
 		<arg name="uri" value="$(arg uri5)" />
 		<arg name="tf_prefix" value="dcf5" />
 		<arg name="enable_logging" value="False" />
 		</include>
-	</group>  
+	</group>   -->
 <!-- 
 	<group ns="dcf7">
 		<include file="$(find crazyflie_driver)/launch/crazyflie_add.launch">
