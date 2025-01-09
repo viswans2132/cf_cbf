@@ -56,7 +56,7 @@ class Drone(object):
         self.landTimerMax = 30
         self.decrement = 0.04
 
-        self.maxInt = np.array([0.3, 0.3, 0.0])
+        self.maxInt = np.array([0.1, 0.1, 0.0])
         self.maxVelInt = np.array([0.3, 0.3, 0.5])
         self.maxAcc = np.array([0.3, 0.3, 0.3])
 
@@ -183,10 +183,12 @@ class Drone(object):
             # print("Odometry status is: ".format(self.odomStatus))
             errPos = self.pos - self.desPos
             # if self.name == "dcf2":
-            # print('Error: {:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
             if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
                 self.errInt = self.errInt + errPos*self.dt
                 self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
+                # print('Error: {:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
+                # print('{}: ErrorInt: {:.3f}, {:.3f}, {:.3f}'.format(self.name, self.errInt[0], self.errInt[1], self.errInt[2]))
+                # print(self.errInt[2])
 
             desVel2 = self.Kpos * errPos + self.KintP * self.errInt + self.desVel
 
@@ -194,7 +196,7 @@ class Drone(object):
                 desVel2 = self.filterValues(errPos, desVel2)
 
         if self.landFlag:
-            print('landing')
+            print('landing: {}'.format(self.name))
             self.startFlag = False
             self.filterFlag = 0.0
             velArray[2] = -2.5
@@ -222,6 +224,7 @@ class Drone(object):
             if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
                 self.errInt = self.errInt + errPos*self.dt
                 self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
+                # print('{}: Error: {:.3f}, {:.3f}, {:.3f}'.format(self.name, errInt[0], errInt[1], errInt[2]))
 
             desVel2 = self.Kpos * errPos + self.KintP * self.errInt + self.desVel
 

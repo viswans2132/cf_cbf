@@ -58,18 +58,21 @@ class DroneController:
     def loop(self):
         odomReceived = self.drone.generateVelocityInputs(self.cmdArray)
         if rospy.get_time() - self.timer > 0.2:
+            print('Odometry Not received for {}'.format(self.drone.name))
             self.drone.landFlag = True
         if odomReceived:
             self.cmdVelMsg.twist.linear.x = self.cmdArray[0]
             self.cmdVelMsg.twist.linear.y = self.cmdArray[1]
             self.cmdVelMsg.twist.linear.z = self.cmdArray[2]
-            self.droneCmdPub.publish(self.cmdVelMsg)
 
             if self.drone.landFlag:
                 landMsg = Int8()
                 landMsg.data = 1
                 self.landSignal.publish(landMsg)
+                print('Sending Land Signal')
 
+            else:
+                self.droneCmdPub.publish(self.cmdVelMsg)
 
         self.rate.sleep()
 
