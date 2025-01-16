@@ -40,7 +40,7 @@ class DroneController:
         time.sleep(1)
         print('Node {}: Awake'.format(self.name))
 
-        self.drone.kRad = np.array([0.6, 0.6, 1.20])
+        self.drone.kRad = np.array([0.8, 0.8, 1.60])
 
 
         paramMsg = DroneParamsMsg()
