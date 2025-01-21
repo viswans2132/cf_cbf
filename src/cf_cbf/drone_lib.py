@@ -146,7 +146,7 @@ class Drone(object):
             try:
                 result = prob.solve()
                 desVel = self.u.value
-            except cvxpy.error.SolveError:
+            except cp.error.SolveError:
                 print("Solve Error: Holding the position")
                 desVel = np.array([0.0, 0.0, 0.0])
 
