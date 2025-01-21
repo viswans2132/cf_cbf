@@ -114,15 +114,19 @@ class Drone(object):
 
     def setMode(self, data):
         if data == 0:
+            if not self.filterFlag:
+                print('filter: ON {}'.format(self.name))
             self.filterFlag = True
             self.followFlag = True
             self.landFlag = False
-            print('filter: ON {}'.format(self.name))
+
         elif data == 1:
             if self.startFlag and self.filterFlag and self.followFlag:
                 self.returnFlag = True
+                print('return {}'.format(self.name))
             self.startFlag = True
             print('takeoff {}'.format(self.name))
+
         elif data == 2:
             if self.landFlag == False:
                 print('landing {}'.format(self.name))
@@ -186,9 +190,6 @@ class Drone(object):
             if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
                 self.errInt = self.errInt + errPos*self.dt
                 self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
-                # print('Error: {:.3f}, {:.3f}, {:.3f}'.format(errPos[0], errPos[1], errPos[2]))
-                # print('{}: ErrorInt: {:.3f}, {:.3f}, {:.3f}'.format(self.name, self.errInt[0], self.errInt[1], self.errInt[2]))
-                # print(self.errInt[2])
 
             desVel2 = self.Kpos * errPos + self.KintP * self.errInt + self.desVel
 
@@ -196,7 +197,8 @@ class Drone(object):
                 desVel2 = self.filterValues(errPos, desVel2)
 
         if self.landFlag:
-            print('landing: {}'.format(self.name))
+            if self.startFlag: 
+                print('landing: {}'.format(self.name))
             self.startFlag = False
             self.filterFlag = 0.0
             velArray[2] = -2.5
