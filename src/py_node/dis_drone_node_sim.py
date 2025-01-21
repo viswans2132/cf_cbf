@@ -1,5 +1,7 @@
  #!/usr/bin/env python
- # license removed for brevity
+ 
+ # Developed by Viswa Narayanan Sankaranarayanan
+
 import rospy
 import pkg_resources
 from std_msgs.msg import String
