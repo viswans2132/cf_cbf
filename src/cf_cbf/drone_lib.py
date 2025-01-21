@@ -143,9 +143,14 @@ class Drone(object):
         try:
             constraints = [self.A@self.u >= self.b]
             prob = cp.Problem(cp.Minimize(cp.quad_form(self.u-u_, self.P)), constraints)
-            result = prob.solve()
+            try:
+                result = prob.solve()
+                desVel = self.u.value
+            except cvxpy.error.SolveError:
+                print("Solve Error: Holding the position")
+                desVel = np.array([0.0, 0.0, 0.0])
 
-            desVel = self.u.value
+
         except ValueError:
             print("Constraint matrices have incompatible dimensions {}:{}".format(self.A.shape, self.b.shape))
             self.landFlag = True
