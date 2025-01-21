@@ -33,7 +33,7 @@ class DroneController:
         self.droneRefSub = rospy.Subscriber('/{}/ref'.format(self.drone.name), DronePosVelMsg, self.ref_cb)
         self.droneConsSub = rospy.Subscriber('/{}/cons'.format(self.drone.name), DroneConstraintMsg, self.cons_cb)
         self.droneCmdPub = rospy.Publisher('/{}/cmd_vel'.format(self.drone.name), Twist, queue_size=10)
-        self.droneParamPub = rospy.Publisher('/{}/param'.format(self.drone.name), DroneParamsMsg, queue_size=10)
+        self.droneParamPub = rospy.Publisher('/{}/params'.format(self.drone.name), DroneParamsMsg, queue_size=10)
 
         self.cmdVelMsg = Twist()
         self.cmdArray = np.array([0,0,0,0.0])
