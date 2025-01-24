@@ -27,29 +27,27 @@ class DroneController:
 
         self.drone = Drone(name)
         self.rate = rospy.Rate(30)
-        self.followSub = rospy.Subscriber('/{}/uav_mode'.format(self.drone.name), Int8, self.setMode)
+        self.followSub = rospy.Subscriber('/{}/update_uav_mode'.format(self.drone.name), Int8, self.setMode)
 
         self.droneOdomSub = rospy.Subscriber('/{}/odometry_sensor1/odometry'.format(self.drone.name, self.drone.name), Odometry, self.odom_cb)
         self.droneRefSub = rospy.Subscriber('/{}/ref'.format(self.drone.name), DronePosVelMsg, self.ref_cb)
         self.droneConsSub = rospy.Subscriber('/{}/cons'.format(self.drone.name), DroneConstraintMsg, self.cons_cb)
         self.droneCmdPub = rospy.Publisher('/{}/vel_msg'.format(self.drone.name), TwistStamped, queue_size=10)
-        self.droneParamPub = rospy.Publisher('/{}/params'.format(self.drone.name), DroneParamsMsg, queue_size=10)
+        self.droneParamSub = rospy.Subscriber('/{}/params'.format(self.drone.name), DroneParamsMsg, self.params_cb)
+        self.droneUpdateParamPub = rospy.Publisher('/{}/update_params'.format(self.drone.name), DroneParamsMsg, queue_size=10)
         self.landSignal = rospy.Publisher('/{}/land_signal'.format(self.drone.name), Int8, queue_size=10)
+        self.droneModePub = rospy.Publisher('/{}/uav_mode'.format(self.drone.name), Int8, queue_size=10)
 
         self.cmdVelMsg = TwistStamped()
         self.cmdArray = np.array([0,0,0,0.0])
 
-        time.sleep(1)
+        # time.sleep(1)
         print('Node {}: Awake'.format(self.name))
 
-        self.drone.kRad = np.array([0.8, 0.8, 1.60])
+        self.drone.kRad = np.array([0.5, 0.5, 1.0])
+        self.drone.kPos = np.array([-3.5, -3.5, -0.7])
 
 
-        paramMsg = DroneParamsMsg()
-        paramMsg.kRad = self.drone.kRad
-        paramMsg.omegaC = self.drone.omegaC
-        self.droneParamPub.publish(paramMsg)
-        self.rate.sleep()
 
         self.timer = rospy.get_time()
 
@@ -59,10 +57,7 @@ class DroneController:
 
     def loop(self):
         odomReceived = self.drone.generateVelocityInputs(self.cmdArray)
-        if rospy.get_time() - self.timer > 0.2:
-            print('Odometry Not received for {}'.format(self.drone.name))
-            self.drone.landFlag = True
-        if odomReceived:
+        if odomReceived and not self.drone.errorFlag:
             self.cmdVelMsg.twist.linear.x = self.cmdArray[0]
             self.cmdVelMsg.twist.linear.y = self.cmdArray[1]
             self.cmdVelMsg.twist.linear.z = self.cmdArray[2]
@@ -71,15 +66,27 @@ class DroneController:
                 landMsg = Int8()
                 landMsg.data = 1
                 self.landSignal.publish(landMsg)
-                # print('Sending Land Signal')
+                # print('{}: land_signal'.format(self.drone.name))
 
             else:
                 self.droneCmdPub.publish(self.cmdVelMsg)
 
+            if not self.drone.paramFlag:
+                paramMsg = DroneParamsMsg()
+                paramMsg.kRad = self.drone.kRad
+                paramMsg.omegaC = self.drone.omegaC
+                self.droneUpdateParamPub.publish(paramMsg)
+
+        if rospy.get_time() - self.timer > 0.2:
+            print('Odometry Not received for {}'.format(self.drone.name))
+            self.drone.errorFlag = True
         self.rate.sleep()
 
     def setMode(self, msg):
         self.drone.setMode(msg.data)
+        modeMsg = Int8()
+        modeMsg.data = self.drone.droneMode
+        self.droneModePub.publish(modeMsg)
 
     def cons_cb(self, msg):
         matrix = np.array(msg.constraints).reshape((-1,4))
@@ -97,6 +104,9 @@ class DroneController:
     def start_cb(self, data):
         self.drone.startFlag = True
         print('Take off: Active')
+
+    def params_cb(self, data):
+        self.drone.paramFlag = True
 
     def ref_cb(self, msg):
         # print(msg.position)

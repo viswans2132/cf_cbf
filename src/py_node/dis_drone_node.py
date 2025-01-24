@@ -27,25 +27,21 @@ class DroneController:
         if self.name == 'dcf5':
             self.drone.KintV = np.array([-0.02, -0.02, -0.4])
         self.rate = rospy.Rate(30)
-        self.followSub = rospy.Subscriber('/{}/uav_mode'.format(self.drone.name), Int8, self.setMode)
+        self.followSub = rospy.Subscriber('/{}/update_uav_mode'.format(self.drone.name), Int8, self.setMode)
 
         self.droneOdomSub = rospy.Subscriber('/vicon/{}/{}/odom'.format(self.drone.name, self.drone.name), Odometry, self.odom_cb)
         self.droneRefSub = rospy.Subscriber('/{}/ref'.format(self.drone.name), DronePosVelMsg, self.ref_cb)
         self.droneConsSub = rospy.Subscriber('/{}/cons'.format(self.drone.name), DroneConstraintMsg, self.cons_cb)
         self.droneCmdPub = rospy.Publisher('/{}/cmd_vel'.format(self.drone.name), Twist, queue_size=10)
-        self.droneParamPub = rospy.Publisher('/{}/params'.format(self.drone.name), DroneParamsMsg, queue_size=10)
+        self.droneParamSub = rospy.Subscriber('/{}/params'.format(self.drone.name), TwistStamped, self.params_cb)
+        self.droneUpdateParamPub = rospy.Publisher('/{}/update_params'.format(self.drone.name), DroneParamsMsg, queue_size=10)
+        self.droneModePub = rospy.Publisher('/{}/uav_mode'.format(self.drone.name), Int8, queue_size=10)
 
         self.cmdVelMsg = Twist()
         self.cmdArray = np.array([0,0,0,0.0])
 
         time.sleep(1)
         print('Node {}: Awake'.format(self.name))
-
-        paramMsg = DroneParamsMsg()
-        paramMsg.kRad = self.drone.kRad
-        paramMsg.omegaC = self.drone.omegaC
-        self.droneParamPub.publish(paramMsg)
-        self.rate.sleep()
 
         self.timer = rospy.get_time()
 
@@ -65,6 +61,12 @@ class DroneController:
             self.cmdVelMsg.linear.z = self.cmdArray[3]
             self.cmdVelMsg.angular.z = self.cmdArray[2]
             self.droneCmdPub.publish(self.cmdVelMsg)
+
+            if not self.drone.paramFlag:
+                paramMsg = DroneParamsMsg()
+                paramMsg.kRad = self.drone.kRad
+                paramMsg.omegaC = self.drone.omegaC
+                self.droneUpdateParamPub.publish(paramMsg)
         self.rate.sleep()
 
     def setMode(self, msg):
@@ -86,6 +88,9 @@ class DroneController:
     def start_cb(self, data):
         self.drone.startFlag = True
         print('Take off: Active')
+
+    def params_cb(self, data):
+        self.drone.paramFlag = True
 
     def ref_cb(self, msg):
         # print(msg.position)

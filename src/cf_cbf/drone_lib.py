@@ -53,6 +53,9 @@ class Drone(object):
         self.followFlag = False
         self.returnFlag = False
 
+        self.errorFlag = False
+        self.paramFlag = False
+
         self.landTimerMax = 30
         self.decrement = 0.04
 
@@ -64,6 +67,8 @@ class Drone(object):
         self.b = 0.0
         self.P = np.eye(3)
         self.u = cp.Variable(3)
+
+        self.droneMode = 0
 
         print("crazyflie added: {}".format(self.name))
 
@@ -134,6 +139,7 @@ class Drone(object):
                     self.decrement = 0.01
                     self.landTimerMax = 60
             self.landFlag = True
+        self.droneMode = data
 
     def filterValues(self, err, u_):
         # print([self.A.shape, self.u.shape])
@@ -146,8 +152,8 @@ class Drone(object):
             try:
                 result = prob.solve()
                 desVel = self.u.value
-            except cp.error.SolveError:
-                print("Solve Error: Holding the position")
+            except cp.error.SolverError:
+                print("Solver Error: Holding the position")
                 desVel = np.array([0.0, 0.0, 0.0])
 
 
