@@ -158,7 +158,7 @@ class Drone(object):
 
 
         except ValueError:
-            print("Constraint matrices have incompatible dimensions {}:{}".format(self.A.shape, self.b.shape))
+            print(f"[{self.name}_lib]: Constraint matrices have incompatible dimensions {self.A.shape}:{self.B.shape}")
             self.landFlag = True
             desVel = np.array([0,0,-0.1])
 
@@ -169,8 +169,10 @@ class Drone(object):
         #     print("{:.3f}, {:.3f}, {:.3f}".format(u_[0], u_[1], u_[2]))
         #     pass
         try:
+            # print(f'[{self.name}_lib]: Filtered velocity: {desVel}')
             desVel = np.maximum(-np.array([0.3, 0.3, 0.2]), np.minimum(np.array([0.3, 0.3, 0.4]), desVel))
         except TypeError:
+            print(f'[{self.name}_lib]: Type error in the filter')
             desVel = np.array([0,0.0,0])
 
         return desVel
@@ -197,15 +199,19 @@ class Drone(object):
         if self.odomStatus:
             # print("Odometry status is: ".format(self.odomStatus))
             errPos = self.pos - self.desPos
+            if self.name == "dcf1":
+                print(f'[{self.name}_lib]: Error: {errPos[0]:.2f}: {errPos[1]:.2f}: {errPos[2]:.2f}')
             # if self.name == "dcf2":
             if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
                 self.errInt = self.errInt + errPos*self.dt
                 self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
 
             desVel2 = self.Kpos * errPos + self.KintP * self.errInt + self.desVel
+            # print(f'[{self.name}_lib]: Velocity before filtering: {desVel2}')
 
             if self.filterFlag:
                 desVel2 = self.filterValues(errPos, desVel2)
+            # print(f'[{self.name}_lib]: Velocity after filtering: {desVel2}')
 
         if self.landFlag:
             if self.startFlag: 
@@ -220,6 +226,7 @@ class Drone(object):
             velArray[0] = desVel2[0]
             velArray[1] = desVel2[1]
             velArray[2] = desVel2[2]
+        # print(f'[{self.name}_lib]: Velocity: {velArray}')
         return self.odomStatus
 
 

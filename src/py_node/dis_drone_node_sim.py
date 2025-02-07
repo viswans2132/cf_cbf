@@ -45,7 +45,7 @@ class DroneController:
         print('Node {}: Awake'.format(self.name))
 
         self.drone.kRad = np.array([0.5, 0.5, 1.0])
-        self.drone.kPos = np.array([-3.5, -3.5, -0.7])
+        self.drone.kPos = np.array([-4.5, -4.5, -0.7])
 
 
 
@@ -57,7 +57,9 @@ class DroneController:
 
     def loop(self):
         odomReceived = self.drone.generateVelocityInputs(self.cmdArray)
+        # rospy.loginfo(f"[self.name]_dis_node: Error Flag: {self.drone.errorFlag}")
         if odomReceived and not self.drone.errorFlag:
+            # rospy.loginfo(f'[{self.name}_dis_node]: Command Velocity {self.cmdArray}')
             self.cmdVelMsg.twist.linear.x = self.cmdArray[0]
             self.cmdVelMsg.twist.linear.y = self.cmdArray[1]
             self.cmdVelMsg.twist.linear.z = self.cmdArray[2]
@@ -72,13 +74,15 @@ class DroneController:
                 self.droneCmdPub.publish(self.cmdVelMsg)
 
             if not self.drone.paramFlag:
+                rospy.loginfo(f'[{self.name}_dis_node]: Value of parameter flag: {self.drone.paramFlag}')
                 paramMsg = DroneParamsMsg()
                 paramMsg.kRad = self.drone.kRad
                 paramMsg.omegaC = self.drone.omegaC
                 self.droneUpdateParamPub.publish(paramMsg)
 
-        if rospy.get_time() - self.timer > 0.2:
-            print('Odometry Not received for {}'.format(self.drone.name))
+        if rospy.get_time() - self.timer > 2:
+            # print('Odometry Not received for {}'.format(self.drone.name))
+            rospy.loginfo(f"[{self.name}]_dis_node: Odometry not received for {self.drone.name}.")
             self.drone.errorFlag = True
         self.rate.sleep()
 
@@ -107,6 +111,7 @@ class DroneController:
 
     def params_cb(self, data):
         self.drone.paramFlag = True
+        rospy.loginfo(f"[{self.name}_dis_node]: Parameter Update Acknowledged.")
 
     def ref_cb(self, msg):
         # print(msg.position)
