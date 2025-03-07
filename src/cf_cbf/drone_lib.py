@@ -35,15 +35,15 @@ class Drone(object):
         self.dt = 1/self.hz
 
         self.Kpos = np.array([-2.5, -2.5, -0.7])
-        self.Kvel = np.array([-0.5, -0.5, -0.8])
-        self.Kder = np.array([-0.05, -0.05, -0.08])
+        self.Kvel = np.array([-0.5, -0.5, -0.5])
+        self.Kder = np.array([-0.0, -0.0, -0.0])
         # self.Kder = np.array([-0.05, -0.05, -0.05])
         self.KintP = np.array([-0.5, -0.5, -0.0])
-        self.KintV = np.array([-0.0, -0.0, -0.2])
+        self.KintV = np.array([-0.0, -0.0, -0.4])
         # self.KintV = np.array([-0.0, -0.0, -0.05])
         self.Kyaw = 1
 
-        self.kRad = np.array([0.3, 0.3, 0.8])
+        self.kRad = np.array([0.3, 0.3, 0.6])
         self.omegaC = 1.0
 
         self.landCounter = 0.0
@@ -81,10 +81,11 @@ class Drone(object):
         self.quat[2] = quat[2]
         self.quat[3] = quat[3]
 
-        if np.absolute(self.quat[1]) > 0.5 or np.absolute(self.quat[0]) > 0.5:
-            self.landFlag = True
-            self.landTimerMax = 2
-            self.decrement = 0.5
+        # if np.absolute(self.quat[1]) > 0.5 or np.absolute(self.quat[0]) > 0.5:
+        #     self.landFlag = True
+        #     self.landTimerMax = 2
+        #     self.decrement = 0.5
+        #     print(f'[{self.name}_lib]: Quaternions wrong.')
 
 
         self.yaw = euler_from_quaternion(self.quat)[2]
@@ -92,7 +93,7 @@ class Drone(object):
         R_inv = quaternion_matrix(self.quat)[:-1, :-1]
         # self.R = np.linalg.inv(R_inv)
         self.R = np.array([[np.cos(self.yaw), np.sin(self.yaw), 0], [-np.sin(self.yaw), np.cos(self.yaw), 0], [0, 0, 1]])
-        self.vel = R_inv.T.dot(np.array([velocity[0], velocity[1], velocity[2]]))
+        self.vel = R_inv.dot(np.array([velocity[0], velocity[1], velocity[2]]))
         # self.vel[0] = velocity[0]
         # self.vel[1] = velocity[1]
         # self.vel[2] = velocity[2]
@@ -101,7 +102,8 @@ class Drone(object):
         if self.odomStatus == False:
             self.desPos[0] = self.pos[0]
             self.desPos[1] = self.pos[1]
-            print('Odometry Received')
+            self.desYaw = self.yaw
+            print(f'[{self.name}_lib]: Odometry Received')
         self.odomStatus = True
         # print('odom_received')
 
@@ -139,6 +141,7 @@ class Drone(object):
                     self.decrement = 0.01
                     self.landTimerMax = 60
             self.landFlag = True
+            print('[{self.name}_lib]: Landing')
         self.droneMode = data
 
     def filterValues(self, err, u_):
@@ -199,14 +202,15 @@ class Drone(object):
         if self.odomStatus:
             # print("Odometry status is: ".format(self.odomStatus))
             errPos = self.pos - self.desPos
-            if self.name == "dcf1":
-                print(f'[{self.name}_lib]: Error: {errPos[0]:.2f}: {errPos[1]:.2f}: {errPos[2]:.2f}')
+            # if self.name == "dcf1":
+                # print(f'[{self.name}_lib]: Error: {errPos[0]:.2f}: {errPos[1]:.2f}: {errPos[2]:.2f}')
             # if self.name == "dcf2":
             if self.returnFlag and np.linalg.norm(errPos[:2]) < 0.5:
                 self.errInt = self.errInt + errPos*self.dt
                 self.errInt = np.maximum(-self.maxInt, np.minimum(self.maxInt, self.errInt))
 
             desVel2 = self.Kpos * errPos + self.KintP * self.errInt + self.desVel
+            # print(f'')
             # print(f'[{self.name}_lib]: Velocity before filtering: {desVel2}')
 
             if self.filterFlag:
@@ -266,12 +270,13 @@ class Drone(object):
             # print(des_a)
             # print(des_a[3])
             des_a = np.maximum(-self.maxAcc, np.minimum(self.maxAcc, des_a))
-            # print("Error: {0:.3f}: {1:.3f}: {2:.3f}: \n Acc: {3:.3f}: {4:.3f}: {5:.3f}".format(self.errVel[0], errPos[1], errPos[2], des_a[0], des_a[1], des_a[2]))
-            # print("{:.3f}: {:.3f}: {:.3f}".format(errPos[0], errPos[1], errPos[2]))
+            # print("Error: {0:.3f}: {1:.3f}: {2:.3f}: \n Acc: {3:.3f}: {4:.3f}: {5:.3f}".format(errPos[0], errPos[1], errPos[2], des_a[0], des_a[1], des_a[2]))
+            # if self.name=="dcf6":
+            #     print("{:.3f}: {:.3f}: {:.3f}".format(errPos[0], errPos[1], errPos[2]))
 
-            # yaw_diff = np.minimum(0.2, np.maximum(self.desYaw - self.yaw, -0.2))
+            yaw_diff = np.minimum(0.2, np.maximum(self.desYaw - self.yaw, -0.2))
 
-            yaw_des = -1.0*self.yaw -0.5*self.ang_vel[2]
+            yaw_des = -1.0*yaw_diff - 0.5*self.ang_vel[2]
 
 
             uPitch = des_a[0]
@@ -291,7 +296,7 @@ class Drone(object):
 
                 self.landCounter =  self.landCounter + 1
 
-            elif self.startFlag:
+            else:
                 uThrust = des_a[2] + 0.63
             # print("thrust: {}".format(uThrust))
         else:
