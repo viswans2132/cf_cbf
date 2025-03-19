@@ -9,7 +9,8 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import Header
 from geometry_msgs.msg import PoseStamped
 import time 
-from quaternion_to_euler import quaternion_to_euler
+from tf.transformations import euler_from_quaternion, quaternion_matrix
+# from quaternion_to_euler import quaternion_to_euler
 # from trajectory import trajectory
 # from predict import predict
 # from traj_msg.msg import OptimizationResult
@@ -56,7 +57,7 @@ def callback_odom(data):
     qz = data.pose.pose.orientation.z
     qw = data.pose.pose.orientation.w
     d_yaw = data.twist.twist.angular.z
-    [roll, pitch, yaw] = quaternion_to_euler(qx, qy, qz, qw)
+    [roll, pitch, yaw] = euler_from_quaternion([qx, qy, qz, qw])
 
     vx = data.twist.twist.linear.x
     vy = data.twist.twist.linear.y
@@ -84,8 +85,8 @@ def callback_start(data):
 
 def controller():
     rospy.init_node('pid_controller', anonymous=True)
-    pub = rospy.Publisher('/dcf13/cmd_vel', Twist, queue_size=10)
-    sub = rospy.Subscriber('/vicon/dcf13/dcf13/odom', Odometry, callback_odom)
+    pub = rospy.Publisher('/dcf6/cmd_vel', Twist, queue_size=10)
+    sub = rospy.Subscriber('/vicon/dcf6/dcf6/odom', Odometry, callback_odom)
     sub_start = rospy.Subscriber('/set_start', String, callback_start)
     sub_safety = rospy.Subscriber('/safety_land', String, callback_safety)
     sub_ref = rospy.Subscriber('/reference', PoseStamped, callback_ref)
@@ -93,8 +94,8 @@ def controller():
     rate = rospy.Rate(30)
     global xref, yref, zref, integrator, land_flag, yawref
 
-    xref = 0.3
-    yref = 4.0
+    xref = 1.0
+    yref = 4.05
     zref = 0.8
     yawref = 0
 
@@ -128,7 +129,7 @@ def controller():
             u_t = k_vy*(k_pz*(zref - zpos) - vz) + to_thrust + integrator
             u_y = k_y*ang_diff - k_dy*d_yaw
 
-            # print("{:.3f}, {:.3f}, {:.3f},\n {:.3f}, {:.3f}, {:.3f}".format(vx_ref, yref - ypos, zref - zpos, fx, fy, u_t))
+            print("Err: {:.3f}, {:.3f}, {:.3f},\n {:.3f}, {:.3f}, {:.3f}".format(xref - xpos, yref - ypos, zref - zpos, fx, fy, u_t))
 
             if u_p > 0.25:
                 u_p = 0.25
@@ -151,6 +152,8 @@ def controller():
                 t = t+1
                 if t > 50:
                     u_t = 0
+                if t > 52:
+                    u_t = 0
                     sys.exit()
 
         
@@ -165,7 +168,7 @@ def controller():
         cmd_vel.linear.y = u_r
         cmd_vel.linear.z = u_t
         cmd_vel.angular.z = u_y
-        print("{:.3f}, {:.3f}, {:.3f}, {:.3f}".format(u_p, u_r, u_y, u_t))
+        # print("{:.3f}, {:.3f}, {:.3f}, {:.3f}".format(u_p, u_r, u_y, u_t))
 
         
         pub.publish(cmd_vel)

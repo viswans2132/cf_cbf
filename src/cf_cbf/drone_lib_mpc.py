@@ -4,7 +4,9 @@ import pkg_resources
 from tf.transformations import euler_from_quaternion, quaternion_matrix
 import time
 import numpy as np
-import cvxpy as cp
+# import cvxpy as cp
+import casadi as ca
+import opengen as og
 import sys
 
 class Drone(object):
@@ -35,15 +37,15 @@ class Drone(object):
         self.dt = 1/self.hz
 
         self.Kpos = np.array([-2.5, -2.5, -0.7])
-        self.Kvel = np.array([-0.5, -0.5, -0.8])
-        self.Kder = np.array([-0.05, -0.05, -0.08])
+        self.Kvel = np.array([-0.5, -0.5, -0.5])
+        self.Kder = np.array([-0.0, -0.0, -0.0])
         # self.Kder = np.array([-0.05, -0.05, -0.05])
         self.KintP = np.array([-0.5, -0.5, -0.0])
-        self.KintV = np.array([-0.2, -0.2, -0.2])
+        self.KintV = np.array([-0.0, -0.0, -0.2])
         # self.KintV = np.array([-0.0, -0.0, -0.05])
         self.Kyaw = 1
 
-        self.kRad = np.array([0.2, 0.2, 0.6])
+        self.kRad = np.array([0.3, 0.3, 0.6])
         self.omegaC = 1.0
 
         self.landCounter = 0.0
@@ -55,12 +57,11 @@ class Drone(object):
 
         self.errorFlag = False
         self.paramFlag = False
-        self.quatFailure = 0
 
         self.landTimerMax = 30
         self.decrement = 0.04
 
-        self.maxInt = np.array([0.3, 0.3, 0.0])
+        self.maxInt = np.array([0.1, 0.1, 0.0])
         self.maxVelInt = np.array([0.3, 0.3, 0.5])
         self.maxAcc = np.array([0.3, 0.3, 0.3])
 
@@ -74,33 +75,26 @@ class Drone(object):
         print("crazyflie added: {}".format(self.name))
 
     def setOdom(self, position, quat, velocity):
-
         self.pos[0] = position[0]
         self.pos[1] = position[1]
         self.pos[2] = position[2]
-        if np.absolute(quat[1]) > 0.5 or np.absolute(quat[0]) > 0.5:
-            print(f'[{self.name}_lib]: Quaternions wrong: {self.quat[0]:.3f}, {self.quat[1]:.3f}, {self.quat[2]:.3f}, {self.quat[3]:.3f} ')
-            self.quatFailure = self.quatFailure + 1
-            if self.quatFailure > 100:
-                self.landFlag = True
-                self.landTimerMax = 60
-                self.decrement = 0.01
-        else:
-            self.quat[0] = quat[0]
-            self.quat[1] = quat[1]
-            self.quat[2] = quat[2]
-            self.quat[3] = quat[3]
-            self.quatFailure = 0
+        self.quat[0] = quat[0]
+        self.quat[1] = quat[1]
+        self.quat[2] = quat[2]
+        self.quat[3] = quat[3]
 
+        if np.absolute(self.quat[1]) > 0.5 or np.absolute(self.quat[0]) > 0.5:
+            self.landFlag = True
+            self.landTimerMax = 2
+            self.decrement = 0.5
+            print(f'[{self.name}_lib]: Quaternions wrong.')
 
 
         self.yaw = euler_from_quaternion(self.quat)[2]
 
         R_inv = quaternion_matrix(self.quat)[:-1, :-1]
         # self.R = np.linalg.inv(R_inv)
-        self.R = np.array([[np.cos(self.yaw), np.sin(self.yaw), 0], 
-                            [-np.sin(self.yaw), np.cos(self.yaw), 0], 
-                                [0, 0, 1]])
+        self.R = np.array([[np.cos(self.yaw), np.sin(self.yaw), 0], [-np.sin(self.yaw), np.cos(self.yaw), 0], [0, 0, 1]])
         self.vel = R_inv.dot(np.array([velocity[0], velocity[1], velocity[2]]))
         # self.vel[0] = velocity[0]
         # self.vel[1] = velocity[1]
@@ -171,7 +165,7 @@ class Drone(object):
         except ValueError:
             print(f"[{self.name}_lib]: Constraint matrices have incompatible dimensions {self.A.shape}:{self.B.shape}")
             self.landFlag = True
-            desVel = np.array([0, 0, -0.1])
+            desVel = np.array([0,0,-0.1])
 
         # desVel = u_
 
@@ -184,7 +178,7 @@ class Drone(object):
             desVel = np.maximum(-np.array([0.3, 0.3, 0.2]), np.minimum(np.array([0.3, 0.3, 0.4]), desVel))
         except TypeError:
             print(f'[{self.name}_lib]: Type error in the filter')
-            desVel = np.array([0, 0.0, 0.1])
+            desVel = np.array([0,0.0,0])
 
         return desVel
 
@@ -295,7 +289,7 @@ class Drone(object):
                 self.startFlag = False
                 self.filterFlag = False
                 # print('{}: Landing')
-                uThrust = 0.50 - self.landCounter*self.decrement
+                uThrust = 0.54 - self.landCounter*self.decrement
                 uRoll = 0.0
                 uPitch = 0.0
                 if self.landCounter > self.landTimerMax:

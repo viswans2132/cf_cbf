@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 	
-	<group ns="dcf5">
+	<group ns="cf8">
 		<node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen">
 			<param name="uav_name" value="dcf5" />
 		</node>

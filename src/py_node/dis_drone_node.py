@@ -44,6 +44,12 @@ class DroneController:
 
         self.timer = rospy.get_time()
 
+        if self.name == "dcf6" or "dcf2":
+            self.drone.KintV = np.array([-0.1, -0.1, -0.3])
+            self.drone.Kder = np.array([-0.05, -0.05, -0.1])
+            self.drone.Kpos = np.array([-2.5, -2.5, -0.7])
+            self.drone.Kvel = np.array([-0.6, -0.6, -0.5])
+
         while not rospy.is_shutdown():
             self.loop()
 
@@ -111,6 +117,8 @@ class DroneController:
         # print(msg.position)
         try:
             pose = np.array([msg.position[0], msg.position[1], msg.position[2], msg.yaw])
+            if self.name == "dcf6":
+                pose[2] = pose[2] + 0.03
             vel = np.array([msg.velocity[0], msg.velocity[1], msg.velocity[2], msg.yawVelocity])
             self.drone.setRef(pose, vel)
         except IndexError:
@@ -118,6 +126,7 @@ class DroneController:
 
     def odom_cb(self, msg):
         position = np.array([msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z])
+        # print(f'[{self.name}_dis_node]: {msg.pose.pose.orientation.x:.3f},  {msg.pose.pose.orientation.y:.3f}')
         quat = np.array([msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z, msg.pose.pose.orientation.w])
         velocity = np.array([msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z, msg.twist.twist.angular.z])
         self.drone.setOdom(position, quat, velocity)

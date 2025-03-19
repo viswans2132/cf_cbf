@@ -68,7 +68,7 @@ class DroneController:
                 landMsg = Int8()
                 landMsg.data = 1
                 self.landSignal.publish(landMsg)
-                # print('{}: land_signal'.format(self.drone.name))
+                print('{}: land_signal'.format(self.drone.name))
 
             else:
                 self.droneCmdPub.publish(self.cmdVelMsg)
