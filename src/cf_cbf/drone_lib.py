@@ -196,6 +196,8 @@ class Drone(object):
         if self.followFlag:
             self.desPos = np.array([pos[0], pos[1], pos[2]])
             self.desVel = np.array([vel[1], vel[2], vel[3]])
+            self.desPos[0] = self.desPos[0] + self.desVel[0]*0.1
+            self.desPos[1] = self.desPos[1] + self.desVel[1]*0.1
             self.desYaw = pos[3]
             self.desYawVel = vel[3]
 
