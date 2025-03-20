@@ -94,8 +94,8 @@ def controller():
     rate = rospy.Rate(30)
     global xref, yref, zref, integrator, land_flag, yawref
 
-    xref = 1.0
-    yref = 4.05
+    xref = -0.28
+    yref = 4.00
     zref = 0.8
     yawref = 0
 

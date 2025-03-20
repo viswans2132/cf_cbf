@@ -34,7 +34,7 @@ class Drone(object):
         self.hz = 30.0
         self.dt = 1/self.hz
 
-        self.Kpos = np.array([-1.5, -1.5, -0.7])
+        self.Kpos = np.array([-2.5, -2.5, -0.7])
         self.Kvel = np.array([-0.5, -0.5, -0.8])
         self.Kder = np.array([-0.05, -0.05, -0.08])
         # self.Kder = np.array([-0.05, -0.05, -0.05])
