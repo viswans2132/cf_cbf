@@ -97,8 +97,8 @@ class DroneController:
         self.drone.updateConstraintMatrices(matrix[:,:3], matrix[:,3])
 
     def land_cb(self, data):
-        self.drone.landFlag = True
-        print('Safety Landing: Active')
+        # self.drone.quatFailure = True
+        print('Deprecated')
 
     def follow_cb(self, data):
         self.drone.followFlag = True

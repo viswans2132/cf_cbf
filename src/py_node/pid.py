@@ -104,12 +104,12 @@ def controller():
     t = 0
     integrator = 0
 
-    k_px = 1.5
-    k_py = 1.5
-    k_pz = 0.5
+    k_px = 2.5
+    k_py = 2.5
+    k_pz = 0.7
     k_vx = 0.5
     k_vy = 0.5
-    k_vz = 0.5
+    k_vz = 0.8
 
     k_y = 1
     k_dy = 0.2

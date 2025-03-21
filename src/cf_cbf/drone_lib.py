@@ -79,12 +79,12 @@ class Drone(object):
         self.pos[1] = position[1]
         self.pos[2] = position[2]
         if np.absolute(quat[1]) > 0.5 or np.absolute(quat[0]) > 0.5:
-            print(f'[{self.name}_lib]: Quaternions wrong: {self.quat[0]:.3f}, {self.quat[1]:.3f}, {self.quat[2]:.3f}, {self.quat[3]:.3f} ')
+            print(f'[{self.name}_lib]: Quaternions wrong: {quat[0]:.3f}, {quat[1]:.3f}, {quat[2]:.3f}, {quat[3]:.3f} ')
             self.quatFailure = self.quatFailure + 1
-            if self.quatFailure > 100:
+            if self.quatFailure > 1000:
                 self.landFlag = True
-                self.landTimerMax = 60
-                self.decrement = 0.01
+                self.landTimerMax = 90
+                self.decrement = 0.005
         else:
             self.quat[0] = quat[0]
             self.quat[1] = quat[1]
