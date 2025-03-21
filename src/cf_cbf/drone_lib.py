@@ -83,6 +83,7 @@ class Drone(object):
             self.quatFailure = self.quatFailure + 1
             if self.quatFailure > 1000:
                 self.landFlag = True
+                print(f'[{self.name}_lib]: Landing because of quaternion failure')
                 self.landTimerMax = 90
                 self.decrement = 0.005
         else:

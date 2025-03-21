@@ -59,12 +59,13 @@ class DroneController:
         if odomReceived and not self.drone.errorFlag:
             if rospy.get_time() - self.timer > 0.2:
                 self.drone.landFlag = True
+                print(f'[{self.drone.name}_dis_node]: Odometry not received in 0.2 seconds')
 
             if self.drone.landFlag:           
                 landMsg = Int8()
                 landMsg.data = 1
                 self.landSignal.publish(landMsg)
-                print('{}: land_signal'.format(self.drone.name))
+                print(f'[{self.drone.name}_dis_node]: land_signal')
 
             self.cmdVelMsg.linear.x = self.cmdArray[0]
             self.cmdVelMsg.linear.y = self.cmdArray[1]
