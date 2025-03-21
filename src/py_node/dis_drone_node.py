@@ -24,7 +24,7 @@ class DroneController:
         self.name = name
 
         self.drone = Drone(name)
-        self.rate = rospy.Rate(30)
+        self.rate = rospy.Rate(60)
         self.followSub = rospy.Subscriber('/{}/update_uav_mode'.format(self.drone.name), Int8, self.setMode)
 
         self.droneOdomSub = rospy.Subscriber('/vicon/{}/{}/odom'.format(self.drone.name, self.drone.name), Odometry, self.odom_cb)
@@ -44,11 +44,21 @@ class DroneController:
 
         self.timer = rospy.get_time()
 
-        if self.name == "dcf6" or "dcf2":
+        if self.name == "dcf2":
             self.drone.KintV = np.array([-0.1, -0.1, -0.3])
             self.drone.Kder = np.array([-0.05, -0.05, -0.1])
             self.drone.Kpos = np.array([-2.5, -2.5, -0.7])
             self.drone.Kvel = np.array([-0.6, -0.6, -0.5])
+            self.maxAcc = np.array([0.25, 0.25, 0.3])
+
+        elif self.name == "dcf6":
+            self.drone.KintV = np.array([-0.1, -0.1, -0.4])
+            self.drone.Kder = np.array([-0.05, -0.05, -0.1])
+            self.drone.Kpos = np.array([-2.5, -2.5, -0.7])
+            self.drone.Kvel = np.array([-0.6, -0.6, -0.5])
+
+        else:
+            self.maxAcc = np.array([0.25, 0.25, 0.3])
 
         while not rospy.is_shutdown():
             self.loop()
@@ -65,7 +75,7 @@ class DroneController:
                 landMsg = Int8()
                 landMsg.data = 1
                 self.landSignal.publish(landMsg)
-                print(f'[{self.drone.name}_dis_node]: land_signal')
+                # print(f'[{self.drone.name}_dis_node]: land_signal')
 
             self.cmdVelMsg.linear.x = self.cmdArray[0]
             self.cmdVelMsg.linear.y = self.cmdArray[1]

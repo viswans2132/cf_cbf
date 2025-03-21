@@ -35,11 +35,11 @@ class Drone(object):
         self.dt = 1/self.hz
 
         self.Kpos = np.array([-2.5, -2.5, -0.7])
-        self.Kvel = np.array([-0.5, -0.5, -0.8])
-        self.Kder = np.array([-0.05, -0.05, -0.08])
+        self.Kvel = np.array([-0.6, -0.6, -0.8])
+        self.Kder = np.array([-0.05, -0.05, -0.1])
         # self.Kder = np.array([-0.05, -0.05, -0.05])
         self.KintP = np.array([-0.5, -0.5, -0.0])
-        self.KintV = np.array([-0.2, -0.2, -0.2])
+        self.KintV = np.array([-0.2, -0.2, -0.3])
         # self.KintV = np.array([-0.0, -0.0, -0.05])
         self.Kyaw = 1
 
@@ -62,7 +62,7 @@ class Drone(object):
 
         self.maxInt = np.array([0.3, 0.3, 0.0])
         self.maxVelInt = np.array([0.3, 0.3, 0.5])
-        self.maxAcc = np.array([0.3, 0.3, 0.3])
+        self.maxAcc = np.array([0.2, 0.2, 0.3])
 
         self.A = np.zeros((3,))
         self.b = 0.0
@@ -81,7 +81,7 @@ class Drone(object):
         if np.absolute(quat[1]) > 0.5 or np.absolute(quat[0]) > 0.5:
             print(f'[{self.name}_lib]: Quaternions wrong: {quat[0]:.3f}, {quat[1]:.3f}, {quat[2]:.3f}, {quat[3]:.3f} ')
             self.quatFailure = self.quatFailure + 1
-            if self.quatFailure > 1000:
+            if self.quatFailure > 30:
                 self.landFlag = True
                 print(f'[{self.name}_lib]: Landing because of quaternion failure')
                 self.landTimerMax = 90

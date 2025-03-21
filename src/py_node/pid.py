@@ -75,6 +75,7 @@ def callback_ref(data):
 def callback_safety(data):
     global land_flag
     land_flag = 1
+    # print('Safety land')
 
 def callback_start(data):
     global start_flag, odom_flag
@@ -94,8 +95,8 @@ def controller():
     rate = rospy.Rate(30)
     global xref, yref, zref, integrator, land_flag, yawref
 
-    xref = -0.28
-    yref = 4.00
+    xref = 0.4
+    yref = 3.80
     zref = 0.8
     yawref = 0
 
