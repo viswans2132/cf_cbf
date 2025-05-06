@@ -4,7 +4,14 @@
   <arg name="namespace" default="dcf1"/>
 
   <group ns="$(arg namespace)">
-    <node pkg="cf_cbf" name="drone_node" type="dis_drone_node.py" output="screen">
+
+    <node name="position_controller_node" pkg="ss_workshop" type="ss_$(arg controller_name)_node" output="screen">      
+      <rosparam command="load" file="$(find ss_workshop)/resources/$(arg controller_name)_$(arg mav_name).yaml" />
+      <rosparam command="load" file="$(find ss_workshop)/resources/$(arg mav_name).yaml" />
+      <remap from="odom_msg" to="odometry_sensor1/odometry" />
+      <remap from="traj_msg" to="command/trajectory" />      
+    </node>
+    <node pkg="cf_cbf" name="drone_node" type="dis_drone_node_sim.py" output="screen">
       <param name="uav_name" value="$(arg namespace)" />
     </node>
   </group> 
